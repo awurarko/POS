@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - SmartPOS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/auth.js"></script>
+</head>
+<body id="body">
+<div class="container-fluid">
+    <div class="row">
+        <div id="sidebar" class="col-md-2 text-white p-3">
+            <h4>SmartPOS</h4><hr>
+            <nav id="sidebar-nav" class="nav flex-column"></nav>
+        </div>
+        <div class="col-md-10 page-wrap">
+            <div class="page-header">
+                <div>
+                    <h2 class="page-title">Dashboard</h2>
+                    <p id="dashSubtitle" class="page-subtitle"></p>
+                </div>
+                <span id="roleBadge" class="role-badge"></span>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-3">
+                    <div class="card shadow p-3 text-center stat-card">
+                        <h6 id="stat1Label">Today's Revenue</h6>
+                        <p id="dailySales" class="fs-4 fw-bold">GH₵0</p>
+                    </div>
+                </div>
+                <div class="col-md-3" id="stat2Card">
+                    <div class="card shadow p-3 text-center stat-card">
+                        <h6>Total Products</h6>
+                        <p id="totalProducts" class="fs-4 fw-bold">0</p>
+                    </div>
+                </div>
+                <div class="col-md-3" id="stat3Card">
+                    <div class="card shadow p-3 text-center stat-card">
+                        <h6>Low Stock</h6>
+                        <p id="lowStock" class="fs-4 fw-bold text-danger">0</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow p-3 text-center stat-card">
+                        <h6 id="stat4Label">Total Transactions</h6>
+                        <p id="totalSales" class="fs-4 fw-bold">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <h4 class="section-title" id="salesTableTitle">Recent Sales</h4>
+            <table class="table table-striped mt-3">
+                <thead class="table-header">
+                    <tr>
+                        <th>Transaction ID</th><th>Items</th><th>Amount</th>
+                        <th>Payment</th><th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="recentSales"></tbody>
+            </table>
+
+            <div id="lowStockSection">
+                <h4 class="section-title">Low Stock Products</h4>
+                <table class="table table-striped table-hover mt-3 w-50">
+                    <thead class="table-header">
+                        <tr><th>Product</th><th>Remaining Quantity</th></tr>
+                    </thead>
+                    <tbody id="lowStockTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="js/api.js"></script>
+<script>
+async function loadDashboard() {
+    const user = getSession();
+    if (!user) return;
+
+    const isCashier = user.role === "Cashier";
+    let products = [];
+    let sales = [];
+    let stats = null;
+
+    try {
+        sales = await API.getSales();
+    } catch (e) {
+        console.error("Could not load sales:", e);
+    }
+
+    if (!isCashier) {
+        try {
+            products = await API.getProducts();
+        } catch (e) {
+            console.error("Could not load products:", e);
+        }
+        try {
+            stats = await API.getStats();
+        } catch (e) {
+            console.error("Could not load stats:", e);
+        }
+    }
+
+    const badgeColor = {
+        Admin: "background:#c0392b;color:white;",
+        Manager: "background:#d4a017;color:white;",
+        Cashier: "background:#1f0e26;color:white;",
+    };
+    document.getElementById("roleBadge").textContent = user.role;
+    document.getElementById("roleBadge").setAttribute("style", badgeColor[user.role] || "");
+
+    const allSales = isCashier ? sales.filter(s => s.cashier === user.username) : sales;
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayRevenue = isCashier
+        ? allSales
+            .filter(s => String(s.dateTime).slice(0, 10) === todayKey)
+            .reduce((sum, s) => sum + parseFloat(s.total || 0), 0)
+        : (stats ? parseFloat(stats.revenue || 0) : 0);
+
+    if (isCashier) {
+        document.getElementById("dashSubtitle").textContent = "Your sales — " + user.fullName;
+        document.getElementById("stat1Label").textContent = "My Revenue Today";
+        document.getElementById("stat4Label").textContent = "My Transactions";
+        document.getElementById("stat2Card").style.display = "none";
+        document.getElementById("stat3Card").style.display = "none";
+        document.getElementById("lowStockSection").style.display = "none";
+        document.getElementById("salesTableTitle").textContent = "My Recent Sales";
+    } else {
+        const lowStockItems = products.filter(p => p.stock <= 5);
+        document.getElementById("dashSubtitle").textContent = "Full store overview";
+        document.getElementById("totalProducts").innerText = stats ? stats.totalProds : products.length;
+        document.getElementById("lowStock").innerText = stats ? stats.lowStock : lowStockItems.length;
+        document.getElementById("lowStockTable").innerHTML = lowStockItems.length === 0
+            ? `<tr><td colspan="2" class="text-center text-muted">All stock levels good.</td></tr>`
+            : lowStockItems.map(p => `<tr><td>${p.name}</td><td class="text-danger fw-bold">${p.stock}</td></tr>`).join("");
+    }
+
+    document.getElementById("dailySales").innerText = "GH₵" + todayRevenue.toFixed(2);
+    document.getElementById("totalSales").innerText = allSales.length;
+
+    const recent = [...allSales]
+        .sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime))
+        .slice(0, 8);
+
+    document.getElementById("recentSales").innerHTML = recent.length === 0
+        ? `<tr><td colspan="6" class="text-center text-muted">No sales yet.</td></tr>`
+        : recent.map(s => `
+            <tr>
+                <td>${s.id}</td>
+                <td>${s.items.map(i => i.name).join(", ")}</td>
+                <td>GH₵${parseFloat(s.total).toFixed(2)}</td>
+                <td>${s.paymentMethod}</td>
+                <td>${String(s.dateTime || "").split(" ").slice(1).join(" ") || s.dateTime}</td>
+            </tr>`).join("");
+}
+
+loadDashboard();
+</script>
+<script>guardPage(); buildSidebar();</script>
+</body>
+</html>

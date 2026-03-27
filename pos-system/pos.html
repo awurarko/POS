@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>POS - SmartPOS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/auth.js"></script>
+    <style>
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 130px);
+            grid-auto-rows: 130px;
+            gap: 10px;
+            margin-top: 12px;
+            justify-content: start;
+        }
+        .product-tile {
+            background: white;
+            border: 0.5px solid #d8d0e8;
+            border-radius: 12px;
+            padding: 12px 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+            user-select: none;
+            width: 130px;
+            height: 130px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .product-tile:hover {
+            box-shadow: 0 6px 16px rgba(98,60,116,0.18);
+            border-color: #8d6c9f;
+            background: #fbf8ff;
+        }
+        .product-tile.out-of-stock { opacity: 0.42; cursor: not-allowed; pointer-events: none; }
+        .product-tile .icon {
+            width: 48px;
+            height: 48px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .product-tile .p-name { font-size: 13px; font-weight: 500; color: #2c1a36; line-height: 1.25; margin-bottom: 3px; }
+        .product-tile .p-price { font-size: 13px; color: #623c74; font-weight: 600; margin-bottom: 2px; }
+        .product-tile .p-stock { font-size: 11px; color: #aaa; }
+        .product-tile .p-stock.low { color: #c0392b; font-weight: 600; }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 0.5px solid #ede8f5;
+            font-size: 13px;
+        }
+        .cart-item .ci-name { flex: 1; color: #2c1a36; }
+        .qty-controls { display: flex; align-items: center; gap: 6px; }
+        .qty-btn {
+            width: 22px; height: 22px;
+            border-radius: 50%; border: 0.5px solid #c0a8d4;
+            background: white; color: #623c74;
+            font-size: 14px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+        .qty-btn:hover { background: #f4ecfb; }
+        .ci-subtotal { min-width: 48px; text-align: right; color: #623c74; font-weight: 500; }
+        .rm-btn { background: none; border: none; color: #ccc; font-size: 14px; cursor: pointer; padding: 0 0 0 5px; }
+        .rm-btn:hover { color: #c0392b; }
+
+        @media (max-width: 767px) {
+            #cartPanel {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1060;
+                max-height: 82vh;
+                overflow-y: auto;
+                background: #ffffff;
+                border-radius: 16px 16px 0 0;
+                box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
+                transform: translateY(105%);
+                transition: transform 0.22s ease;
+            }
+            #cartPanel.mobile-open {
+                transform: translateY(0);
+            }
+        }
+
+        @media print {
+            body * { visibility: hidden !important; }
+            #receiptModal, #receiptModal * { visibility: visible !important; }
+            #receiptModal {
+                display: block !important;
+                position: absolute !important;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                background: white !important;
+            }
+            #receiptModal .modal-dialog {
+                max-width: 330px;
+                margin: 0 auto;
+            }
+            #receiptModal .modal-header,
+            #receiptModal .modal-footer {
+                display: none !important;
+            }
+            #receiptModal .modal-content {
+                border: none !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+            #receiptModal .modal-body {
+                padding: 8px 10px !important;
+            }
+        }
+    </style>
+</head>
+<body id="body">
+<div class="container-fluid">
+    <div class="row">
+        <!-- SIDEBAR -->
+        <div id="sidebar" class="col-md-2 text-white p-3">
+            <h4>SmartPOS</h4>
+            <hr>
+                        <nav id="sidebar-nav" class="nav flex-column"></nav>
+        </div>
+
+        <!-- PRODUCT PANEL -->
+        <div class="col-md-7 p-4" style="background:#faf8ff; min-height:100vh; border-right:0.5px solid #e8e0f0;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3 style="font-size:1.3rem; color:#2c1a36; margin:0;">Products</h3>
+                <button id="mobileCartBtn" class="btn btn-sm d-md-none" type="button" onclick="openMobileCart()" style="border:0.5px solid #c8b8d8;">Cart</button>
+            </div>
+            <input class="form-control" id="searchInput"
+                   placeholder="Search or scan barcode…"
+                   style="border:0.5px solid #c8b8d8; border-radius:8px; font-size:13px; background:white;">
+            <div class="mt-2 camera-scan-wrap">
+                <div class="d-flex gap-2 align-items-center">
+                    <button class="btn btn-sm" type="button" id="scanToggleBtn" style="border:0.5px solid #c8b8d8;" onclick="toggleBarcodeScanner()">Start Camera Scan</button>
+                    <span id="scanStatus" style="font-size:12px;color:#6a5080;">Scanner idle</span>
+                </div>
+                <video id="barcodeVideo" autoplay playsinline muted
+                       style="display:none;width:100%;max-width:420px;margin-top:8px;border:1px solid #d8d0e8;border-radius:8px;background:#000;"></video>
+                 </div>
+            <div id="productGrid" class="product-grid"></div>
+              <div id="productPagination" class="d-flex gap-2 align-items-center mt-3" style="font-size:12px;color:#6a5080;"></div>
+        </div>
+
+        <!-- CART PANEL -->
+        <div class="col-md-3 p-4" id="cartPanel">
+            <div class="d-flex justify-content-between align-items-center d-md-none mb-2">
+                <h3 style="font-size:1.1rem; color:#2c1a36; margin:0;">Cart</h3>
+                <button class="btn btn-sm" type="button" onclick="closeMobileCart()" style="border:0.5px solid #c8b8d8;">Close</button>
+            </div>
+            <h3 style="font-size:1.3rem; color:#2c1a36;">Cart</h3>
+            <div id="cart" style="min-height:240px;"></div>
+            <div style="border-top:1.5px solid #d5c6e5; margin:10px 0; padding-top:10px;">
+                <div class="d-flex justify-content-between" style="font-size:13px; color:#6a5080;">
+                    <span>Subtotal</span><span>GH₵<span id="subtotal">0.00</span></span>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:13px; color:#6a5080; margin-top:6px;">
+                    <span>Discount</span>
+                    <input id="discountInput" type="number" min="0" step="0.01"
+                        style="width:90px;border:0.5px solid #c8b8d8;border-radius:8px;font-size:12px;padding:2px 6px;text-align:right;"
+                        value="0.00">
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:15px; font-weight:600; color:#2c1a36; margin-top:8px;">
+                    <span>Total</span><span>GH₵<span id="total">0.00</span></span>
+                </div>
+            </div>
+            <div style="position:relative; margin-bottom:8px;" id="customerSearchWrap">
+                <input id="customerSearchInput" autocomplete="off"
+                    placeholder="Customer name (optional)"
+                    style="width:100%;border:0.5px solid #c8b8d8;border-radius:8px;font-size:13px;padding:7px 10px;font-family:'Times New Roman',Times,serif;outline:none;"
+                    oninput="filterCustomers(this.value)"
+                    onfocus="showCustomerDropdown()"
+                />
+                <input type="hidden" id="customerSelect" value="">
+                <div id="customerDropdown"
+                    style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #d0c4e8;border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.1);margin-top:2px;">
+                </div>
+            </div>
+            <select class="form-control mb-3" id="paymentMethod"
+                    style="border:0.5px solid #c8b8d8; border-radius:8px; font-size:13px;">
+                <option>Cash</option>
+                <option>Mobile Money</option>
+            </select>
+            <div class="mb-3" id="cashWrap">
+                <label style="font-size:12px;color:#6a5080;">Cash received</label>
+                <input id="cashReceived" type="number" min="0" step="0.01"
+                       style="width:100%;border:0.5px solid #c8b8d8;border-radius:8px;font-size:13px;padding:6px 10px;"
+                       placeholder="0.00">
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#6a5080;margin-top:6px;">
+                    <span>Change due</span>
+                    <span>GH₵<span id="changeDue">0.00</span></span>
+                </div>
+            </div>
+            <div class="mb-3" id="digitalProofWrap" style="display:none;">
+                <label style="font-size:12px;color:#6a5080;" id="payerLabel">Payer number</label>
+                <input id="payerNumber" type="text"
+                       style="width:100%;border:0.5px solid #c8b8d8;border-radius:8px;font-size:13px;padding:6px 10px;"
+                       placeholder="Enter payer number">
+            </div>
+            <button id="checkout-button" class="btn btn-primary w-100" onclick="checkout()">
+                Checkout
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="mobileCartOverlay" onclick="closeMobileCart()" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.4);z-index:1050;"></div>
+<div id="posToast" style="display:none;position:fixed;right:16px;bottom:16px;z-index:1200;background:#1f0e26;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;box-shadow:0 10px 24px rgba(0,0,0,0.24);"></div>
+<div id="receiptSuccessTick" style="display:none;position:fixed;left:50%;top:78%;transform:translateX(-50%);z-index:1300;">
+    <div style="width:54px;height:54px;border-radius:50%;background:#166534;box-shadow:0 10px 20px rgba(22,101,52,0.35);display:flex;align-items:center;justify-content:center;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 12.8l4 4.2L18.5 8.5" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+    </div>
+</div>
+
+<!-- RECEIPT MODAL -->
+<div class="modal fade" id="receiptModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content" style="border-radius:12px; overflow:hidden;">
+            <div class="modal-header" style="background:#1f0e26; color:white; border:none;">
+                <h5 class="modal-title" style="font-size:14px;">Receipt</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="receiptContent" style="font-size:13px;"></div>
+            <div class="modal-footer" style="border:none; padding-top:0;">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal" onclick="closeReceiptFallback()">Close</button>
+                <button class="btn btn-sm" id="receiptPrintBtn" onclick="printReceipt()">Print</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/pos.js"></script>
+<script>guardPage(); buildSidebar();</script>
+</body>
+</html>

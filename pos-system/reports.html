@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reports - SmartPOS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/auth.js"></script>
+</head>
+<body id="body">
+<div class="container-fluid">
+    <div class="row">
+        <!-- SIDEBAR -->
+        <div id="sidebar" class="col-md-2 text-white p-3">
+            <h4>SmartPOS</h4>
+            <hr>
+                        <nav id="sidebar-nav" class="nav flex-column"></nav>
+        </div>
+
+        <!-- MAIN -->
+        <div class="col-md-10 page-wrap">
+            <div class="page-header">
+                <h2 class="page-title">Reports & Analytics</h2>
+                <button class="btn btn-sm btn-outline-danger" onclick="clearSales()">Clear All Sales</button>
+            </div>
+
+            <div class="row g-3 mb-4" id="reportsMvpSection">
+                <div class="col-xl-6 col-lg-12">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card kpi-card h-100">
+                                <div class="kpi-title">Sales Today</div>
+                                <div class="kpi-value" id="mvpSalesToday">0</div>
+                                <div class="kpi-sub" id="mvpRevenueToday">GH₵0.00</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card kpi-card h-100">
+                                <div class="kpi-title">Sales This Week</div>
+                                <div class="kpi-value" id="mvpSalesWeek">0</div>
+                                <div class="kpi-sub" id="mvpRevenueWeek">GH₵0.00</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card kpi-card" id="totalRevenueCard">
+                                <div class="kpi-head">
+                                    <div>
+                                        <div class="kpi-title">Total Revenue</div>
+                                        <div class="kpi-sub" id="kpiRevenueSub">Current month snapshot</div>
+                                    </div>
+                                    <div class="kpi-toggle" role="tablist" aria-label="Revenue mode">
+                                        <button type="button" class="kpi-mode active" id="kpiMonthBtn">Month</button>
+                                        <button type="button" class="kpi-mode" id="kpiAllBtn">All Time</button>
+                                    </div>
+                                </div>
+                                <div class="kpi-value" id="kpiRevenueValue">GH₵0.00</div>
+                                <div class="kpi-foot">
+                                    <span id="kpiRevenueDelta">No previous month data yet.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-6 col-lg-12">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card chart-card h-100">
+                                <div class="card-body">
+                                    <div class="chart-title">Top Selling Products</div>
+                                    <div class="top-products-wrap top-selling-wrap">
+                                        <ul id="mvpTopProducts" class="top-products-list"></ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card chart-card h-100">
+                                <div class="card-body">
+                                    <div class="chart-title">Low Stock (&lt;5)</div>
+                                    <div class="top-products-wrap low-stock-scroll-wrap">
+                                        <ul id="mvpLowStock" class="top-products-list"></ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card chart-card mb-4">
+                <div class="card-body">
+                    <div class="trend-head">
+                        <div>
+                            <div class="chart-title mb-1">Revenue Trend</div>
+                            <p class="page-subtitle mb-0">Monthly revenue performance around selected month.</p>
+                        </div>
+                        <div class="trend-mode-toggle" role="tablist" aria-label="Trend granularity">
+                            <button type="button" class="trend-mode active" id="trendDailyBtn">Daily</button>
+                            <button type="button" class="trend-mode" id="trendWeeklyBtn">Weekly</button>
+                            <button type="button" class="trend-mode" id="trendMonthlyBtn">Monthly</button>
+                        </div>
+                        <div class="month-nav" aria-label="Month selector">
+                            <button type="button" class="month-arrow" id="monthPrev" aria-label="Previous month">&#8592;</button>
+                            <div class="month-label" id="monthLabel">Month</div>
+                            <button type="button" class="month-arrow" id="monthNext" aria-label="Next month">&#8594;</button>
+                        </div>
+                    </div>
+                    <div class="chart-shell chart-shell-wide">
+                        <canvas id="revenueTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-filters card shadow-sm mb-4">
+                <div class="filters-header">
+                    <div>
+                        <h4 class="section-title mb-1">Sales History</h4>
+                        <p class="page-subtitle">All transactions for the selected month.</p>
+                    </div>
+                </div>
+            </div>
+
+            <table class="table table-striped table-hover">
+                    <thead class="table-header">
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Date & Time</th>
+                        <th>Items</th>
+                        <th>Payment</th>
+                        <th>Total</th>
+                                            </tr>
+                </thead>
+                <tbody id="salesTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/reports.js"></script>
+<script>guardPage(); buildSidebar();</script>
+</body>
+</html>

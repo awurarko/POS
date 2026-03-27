@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inventory - SmartPOS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/auth.js"></script>
+</head>
+<body id="body">
+<div class="container-fluid">
+    <div class="row">
+        <!-- SIDEBAR -->
+        <div id="sidebar" class="col-md-2 text-white vh-100 p-3">
+            <h4>SmartPOS</h4>
+            <hr>
+                        <nav id="sidebar-nav" class="nav flex-column"></nav>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="col-md-10 page-wrap">
+            <div class="page-header">
+                <h2 class="page-title">Inventory Management</h2>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card shadow p-3 text-center stat-card">
+                        <h6>Total Products</h6>
+                        <h4 id="totalProducts">0</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow p-3 text-center stat-card">
+                        <h6>Low Stock Items</h6>
+                        <h4 id="lowStockCount" class="text-danger">0</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow p-3 text-center stat-card">
+                        <h6>Out of Stock</h6>
+                        <h4 id="outOfStockCount" class="text-danger">0</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow p-3 text-center stat-card">
+                        <h6>Total Stock Value</h6>
+                        <h4 id="totalValue">GH₵0</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Stock Alert -->
+            <div id="lowStockAlert" class="alert alert-warning d-none">
+                Low stock alert: some products are running low. Please restock soon.
+            </div>
+
+            <!-- Inventory Table -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h4>Stock Levels</h4>
+                <div>
+                    <select class="form-select d-inline w-auto" id="filterSelect" onchange="renderInventory()">
+                        <option value="all">All Items</option>
+                        <option value="low">Low Stock (≤5)</option>
+                        <option value="out">Out of Stock</option>
+                    </select>
+                </div>
+            </div>
+
+            <table class="table table-striped table-hover">
+                <thead class="table-header">
+                    <tr>
+                        <th>ID</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Current Stock</th>
+                        <th>Status</th>
+                        <th>Restock</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- RESTOCK MODAL -->
+<div class="modal fade" id="restockModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#1f0e26; color:white;">
+                <h5 class="modal-title">Restock: <span id="restockName"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="restockIndex">
+                <label>Add Quantity</label>
+                <input class="form-control" id="restockQty" type="number" min="1" placeholder="e.g. 50">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn" id="checkout-button" onclick="confirmRestock()">Restock</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/inventory.js"></script>
+<script>guardPage(); buildSidebar();</script>
+</body>
+</html>

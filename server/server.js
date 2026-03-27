@@ -3,6 +3,7 @@ const cors    = require("cors");
 const helmet  = require("helmet");
 const bcrypt  = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
+const path = require("path");
 const db      = require("./db");
 require("dotenv").config({ path: "env.env" });
 
@@ -18,12 +19,18 @@ app.use(helmet());
 app.use(cors({
     origin: (origin, cb) => {
         if (!origin) return cb(null, true);
-        if (allowedOrigins.length === 0 && process.env.NODE_ENV !== "production") return cb(null, true);
+        if (allowedOrigins.length === 0) return cb(null, true);
         if (allowedOrigins.includes(origin)) return cb(null, true);
         return cb(new Error("Origin not allowed by CORS"));
     }
 }));
 app.use(express.json({ limit: "1mb" }));
+
+const frontendDir = path.resolve(__dirname, "..", "pos-system");
+app.use(express.static(frontendDir));
+app.get("/", (req, res) => {
+    res.sendFile(path.join(frontendDir, "index.html"));
+});
 
 const authLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,

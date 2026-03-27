@@ -5,10 +5,12 @@ function buildApiCandidates() {
     const host = window.location.hostname || "localhost";
     const protocol = window.location.protocol === "https:" ? "https:" : "http:";
     const manual = window.localStorage.getItem("smartpos.apiBase") || "";
+    const deployedSameOrigin = `${window.location.origin}/api`;
+    const isLocalHost = ["localhost", "127.0.0.1"].includes(host);
 
     const candidates = [
         manual.trim(),
-        `${protocol}//${host}:3001/api`,
+        isLocalHost ? `${protocol}//${host}:3001/api` : deployedSameOrigin,
         "http://localhost:3001/api",
         "http://127.0.0.1:3001/api",
     ].filter(Boolean);

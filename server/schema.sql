@@ -4,7 +4,7 @@
 CREATE DATABASE IF NOT EXISTS smartpos;
 USE smartpos;
 
--- ── Users ─────────────────────────────────────────────────────
+-- ── Users 
 CREATE TABLE IF NOT EXISTS users (
     id          VARCHAR(10)  PRIMARY KEY,
     username    VARCHAR(50)  NOT NULL UNIQUE,

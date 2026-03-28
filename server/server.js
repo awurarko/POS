@@ -15,7 +15,9 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
     .map(v => v.trim())
     .filter(Boolean);
 
-app.use(helmet());
+// Keep Helmet protections, but disable CSP because this app currently relies on
+// inline scripts and inline event handlers in HTML templates.
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
     origin: (origin, cb) => {
         if (!origin) return cb(null, true);

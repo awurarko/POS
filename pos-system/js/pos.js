@@ -9,6 +9,7 @@ let cachedProducts = [];
 let currentProductPage = 1;
 const PRODUCTS_PER_PAGE = 24;
 const CEDI = "GH\u20B5";
+const PENDING_PAYSTACK_KEY = "smartpos.pendingPaystackCheckout";
 
 function debounce(fn, delay) {
     let t;
@@ -143,6 +144,97 @@ function changeProductPage(delta, filter) {
 
 function buildRequestRef() {
     return `sale-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function savePendingPaystackCheckout(payload) {
+    try {
+        sessionStorage.setItem(PENDING_PAYSTACK_KEY, JSON.stringify(payload));
+    } catch (e) {}
+}
+
+function getPendingPaystackCheckout() {
+    try {
+        const raw = sessionStorage.getItem(PENDING_PAYSTACK_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function clearPendingPaystackCheckout() {
+    try {
+        sessionStorage.removeItem(PENDING_PAYSTACK_KEY);
+    } catch (e) {}
+}
+
+function resetCheckoutUiAfterSale() {
+    cart = [];
+    renderCart();
+    closeMobileCart();
+    populateCustomerDropdown();
+
+    const cashInput = document.getElementById("cashReceived");
+    if (cashInput) cashInput.value = "";
+    const payerInput = document.getElementById("payerNumber");
+    if (payerInput) payerInput.value = "";
+    const payerEmailInput = document.getElementById("payerEmail");
+    if (payerEmailInput) payerEmailInput.value = "";
+    const discountInput = document.getElementById("discountInput");
+    if (discountInput) discountInput.value = "0.00";
+}
+
+function renderSaleReceiptFromResult(result, fallback) {
+    const receipt = result.receipt || {
+        saleId: result.id,
+        dateTime: new Date().toISOString(),
+        subtotal: fallback.subtotal,
+        discount: fallback.discount,
+        total: fallback.total,
+        paymentMethod: fallback.paymentMethod,
+        cashReceived: fallback.cashReceived,
+        customerName: fallback.customerName,
+        payerNumber: fallback.payerNumber,
+        items: fallback.items,
+    };
+
+    showReceipt(
+        receipt.saleId,
+        new Date(receipt.dateTime).toLocaleDateString() + " " + new Date(receipt.dateTime).toLocaleTimeString(),
+        parseFloat(receipt.subtotal || 0),
+        parseFloat(receipt.discount || 0),
+        parseFloat(receipt.total || 0),
+        fallback.paymentMethodLabel || receipt.paymentMethod,
+        receipt.items || fallback.items,
+        receipt.cashReceived,
+        result.changeDue,
+        receipt.customerName,
+        receipt.payerNumber
+    );
+}
+
+async function resumePendingPaystackCheckout() {
+    const pending = getPendingPaystackCheckout();
+    if (!pending || !pending.providerReference || !pending.salePayload) return;
+
+    try {
+        const statusRes = await API.getPaystackPaymentStatus(pending.providerReference);
+        if (statusRes.status !== "SUCCESS") return;
+
+        const payload = {
+            ...pending.salePayload,
+            paymentStatus: "SUCCESS",
+        };
+
+        const result = await API.createSale(payload);
+        clearPendingPaystackCheckout();
+        renderSaleReceiptFromResult(result, pending.fallback || {});
+        resetCheckoutUiAfterSale();
+        await fetchProducts();
+        renderProductList(document.getElementById("searchInput")?.value || "");
+        showToast("Payment verified and sale recorded.");
+    } catch (e) {
+        // Keep pending record for another retry if the user refreshes.
+    }
 }
 
 function isMobileMoneyMethod(method) {
@@ -422,9 +514,42 @@ async function checkout() {
             provider = "Paystack";
             providerReference = init.reference;
 
+            const pendingSalePayload = {
+                cashier: cashierName,
+                customerId: customerId || null,
+                customerName: customerName || null,
+                subtotal,
+                discount,
+                total,
+                paymentMethod,
+                cashReceived,
+                payerNumber: payerNumber || null,
+                provider,
+                providerReference,
+                paymentStatus: "PENDING",
+                items,
+                requestRef: buildRequestRef(),
+            };
+
+            savePendingPaystackCheckout({
+                providerReference,
+                salePayload: pendingSalePayload,
+                fallback: {
+                    subtotal,
+                    discount,
+                    total,
+                    paymentMethod,
+                    paymentMethodLabel,
+                    cashReceived,
+                    customerName,
+                    payerNumber,
+                    items,
+                },
+            });
+
             if (init.authorizationUrl) {
                 window.open(init.authorizationUrl, "_blank", "noopener");
-                alert("Paystack payment page opened. Complete payment, then click OK to continue verification.");
+                showToast("Paystack opened. Complete payment in the new tab. Verifying automatically...");
             }
 
             paymentStatus = await waitForPaystackSuccess(providerReference);
@@ -438,75 +563,52 @@ async function checkout() {
         }
     }
 
-    let result;
-    try {
-        result = await API.createSale({
-            cashier: cashierName,
-            customerId: customerId || null,
-            customerName: customerName || null,
-            subtotal,
-            discount,
-            total,
-            paymentMethod,
-            cashReceived,
-            payerNumber: payerNumber || null,
-            provider,
-            providerReference,
-            paymentStatus,
-            items,
-            requestRef: buildRequestRef(),
-        });
-    } catch (e) {
-        alert("Checkout failed: " + e.message);
-        return;
-    }
-
-    const receipt = result.receipt || {
-        saleId: result.id,
-        dateTime: new Date().toISOString(),
+    const salePayload = {
+        cashier: cashierName,
+        customerId: customerId || null,
+        customerName: customerName || null,
         subtotal,
         discount,
         total,
         paymentMethod,
         cashReceived,
+        payerNumber: payerNumber || null,
+        provider,
+        providerReference,
+        paymentStatus,
+        items,
+        requestRef: buildRequestRef(),
+    };
+
+    let result;
+    try {
+        result = await API.createSale(salePayload);
+    } catch (e) {
+        alert("Checkout failed: " + e.message);
+        return;
+    }
+
+    clearPendingPaystackCheckout();
+
+    renderSaleReceiptFromResult(result, {
+        subtotal,
+        discount,
+        total,
+        paymentMethod,
+        paymentMethodLabel,
+        cashReceived,
         customerName,
         payerNumber,
         items,
-    };
-
-    showReceipt(
-        receipt.saleId,
-        new Date(receipt.dateTime).toLocaleDateString() + " " + new Date(receipt.dateTime).toLocaleTimeString(),
-        parseFloat(receipt.subtotal || 0),
-        parseFloat(receipt.discount || 0),
-        parseFloat(receipt.total || 0),
-        paymentMethodLabel,
-        receipt.items || items,
-        receipt.cashReceived,
-        result.changeDue,
-        receipt.customerName,
-        receipt.payerNumber
-    );
-
-    cart = [];
-    renderCart();
-    closeMobileCart();
-    populateCustomerDropdown();
-
-    if (cashInput) cashInput.value = "";
-    const payerInput = document.getElementById("payerNumber");
-    if (payerInput) payerInput.value = "";
-    const payerEmailInput = document.getElementById("payerEmail");
-    if (payerEmailInput) payerEmailInput.value = "";
-    const discountInput = document.getElementById("discountInput");
-    if (discountInput) discountInput.value = "0.00";
+    });
+    resetCheckoutUiAfterSale();
 
     await fetchProducts();
     renderProductList(document.getElementById("searchInput")?.value || "");
 }
 
 async function waitForPaystackSuccess(reference) {
-    const maxChecks = 24;
+    const maxChecks = 120;
     const delayMs = 5000;
 
     for (let i = 0; i < maxChecks; i++) {
@@ -667,6 +769,8 @@ document.addEventListener("click", (e) => {
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
+    await resumePendingPaystackCheckout();
+
     await fetchProducts();
     renderProductList();
     renderCart();

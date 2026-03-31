@@ -9,6 +9,7 @@
         .customers-main { background:#f4f1ff; min-height:100vh; padding:28px 32px; }
         .page-topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
         .page-topbar h2 { font-family:'Times New Roman',Times,serif; font-size:1.6rem; color:#4f3d63; margin:0; }
+        .topbar-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
         .search-input { border:1px solid #d0c4e8; border-radius:8px; padding:7px 14px; font-size:13px; font-family:'Times New Roman',Times,serif; background:white; width:240px; outline:none; transition:border-color 0.15s; }
         .search-input:focus { border-color:#8d6c9f; }
         .btn-add { background:#6a5080; color:white; border:none; border-radius:8px; padding:8px 18px; font-size:13px; font-family:'Times New Roman',Times,serif; cursor:pointer; transition:background 0.15s; }
@@ -27,17 +28,39 @@
         }
         .stat-box .s-label { font-size:11px; color:#9a8aaa; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px; }
         .stat-box .s-value { font-size:clamp(1.45rem,3.4vw,1.95rem); font-weight:700; font-family:'Times New Roman',Times,serif; line-height:1.1; color:#4f3d63; }
+        .stat-box .s-value-muted { color:#6a5080; }
+        .stat-box .s-value-accent { color:#6a5080; }
         .table-wrap { background:white; border-radius:12px; border:1px solid #e8e0f2; overflow:hidden; }
         .table { margin:0; font-family:'Times New Roman',Times,serif; font-size:13px; }
         .table thead th { background:#6a5080; color:white; font-weight:500; border:none; padding:12px 14px; font-size:12px; letter-spacing:0.04em; }
         .table tbody td { padding:11px 14px; border-bottom:1px solid #f4f0fa; vertical-align:middle; }
         .table tbody tr:last-child td { border-bottom:none; }
         .table tbody tr:hover { background:#faf8ff; }
+        .c-id { font-size:12px; color:#8d8599; }
+        .c-name { font-weight:600; color:#3f3151; }
+        .c-address { color:#726a7c; font-size:12px; }
+        .c-points { font-weight:700; color:#6a5080; }
+        .c-tier { font-size:10px; color:#8f7aa8; margin-left:4px; text-transform:uppercase; letter-spacing:0.04em; }
+        .c-empty { text-align:center; color:#9c93a8; padding:28px; }
+        .c-action { font-size:11px; border-radius:8px; padding:3px 9px; }
+        .c-action-edit { border:1px solid #d7cde8; color:#5a486f; background:#f8f4ff; }
+        .c-action-edit:hover { background:#efe8fb; border-color:#c9bde1; color:#4d3d61; }
+        .c-action-delete { border:1px solid #efcfdf; color:#9f285d; background:#fff5fa; }
+        .c-action-delete:hover { background:#ffeaf3; border-color:#e9b9d1; color:#8a1f50; }
+        .pagination-wrap { margin-top:12px; display:flex; gap:8px; align-items:center; font-size:12px; color:#6a5080; }
+        .page-btn { border:1px solid #ddd2ee; background:#fff; color:#5a486f; border-radius:7px; padding:3px 10px; font-size:11px; }
+        .page-btn:hover:not(:disabled) { background:#f6f0ff; }
+        .page-btn:disabled { opacity:.5; cursor:not-allowed; }
         .modal-header { background:#6a5080; color:white; }
         .modal-content { border-radius:12px; border:none; }
         .form-label { font-size:13px; color:#555; font-family:'Times New Roman',Times,serif; }
         .form-control { font-size:13px; border:1px solid #d8cce8; border-radius:8px; font-family:'Times New Roman',Times,serif; }
         .form-control:focus { border-color:#8d6c9f; box-shadow:0 0 0 3px rgba(141,108,159,0.12); }
+        .history-head { background:#f4f0fa; }
+        .history-head th { padding:10px 16px; font-size:12px; color:#6a5080; }
+        .history-total { font-weight:700; color:#6a5080; }
+        .modal-divider { border-top:1px solid #f0e8f7; }
+        .modal-close-btn { border-radius:8px; }
     </style>
 </head>
 <body id="body">
@@ -51,8 +74,8 @@
         <div class="col-md-10 customers-main">
             <div class="page-topbar">
                 <h2>Customers</h2>
-                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                    <input class="search-input" id="searchInput" placeholder="Search customersâ€¦" oninput="renderCustomers()">
+                <div class="topbar-actions">
+                    <input class="search-input" id="searchInput" placeholder="Search customers..." oninput="renderCustomers()">
                     <button class="btn-add" onclick="openAddModal()">+ Add Customer</button>
                 </div>
             </div>
@@ -64,11 +87,11 @@
                 </div>
                 <div class="stat-box">
                     <div class="s-label">Total Loyalty Points</div>
-                    <div class="s-value" style="color:#6a5080;" id="statPoints">0</div>
+                    <div class="s-value s-value-muted" id="statPoints">0</div>
                 </div>
                 <div class="stat-box">
                     <div class="s-label">With Purchase History</div>
-                    <div class="s-value" style="color:#1a7a47;" id="statActive">0</div>
+                    <div class="s-value s-value-accent" id="statActive">0</div>
                 </div>
             </div>
 
@@ -87,7 +110,7 @@
                     <tbody id="customersTable"></tbody>
                 </table>
             </div>
-            <div id="customerPagination" style="margin-top:12px;display:flex;gap:8px;align-items:center;font-size:12px;color:#6a5080;"></div>
+            <div id="customerPagination" class="pagination-wrap"></div>
         </div>
     </div>
 </div>
@@ -97,24 +120,24 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Purchase History â€” <span id="historyName"></span></h5>
+                <h5 class="modal-title">Purchase History - <span id="historyName"></span></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
                 <table class="table mb-0">
-                    <thead style="background:#f4f0fa;">
+                    <thead class="history-head">
                         <tr>
-                            <th style="padding:10px 16px;font-size:12px;color:#6a5080;">Transaction</th>
-                            <th style="padding:10px 16px;font-size:12px;color:#6a5080;">Date & Time</th>
-                            <th style="padding:10px 16px;font-size:12px;color:#6a5080;">Items</th>
-                            <th style="padding:10px 16px;font-size:12px;color:#6a5080;">Total</th>
+                            <th>Transaction</th>
+                            <th>Date & Time</th>
+                            <th>Items</th>
+                            <th>Total</th>
                         </tr>
                     </thead>
                     <tbody id="historyTable"></tbody>
                 </table>
             </div>
-            <div class="modal-footer" style="border-top:1px solid #f0e8f7;">
-                <button class="btn btn-light btn-sm" data-bs-dismiss="modal" style="border-radius:8px;">Close</button>
+            <div class="modal-footer modal-divider">
+                <button class="btn btn-light btn-sm modal-close-btn" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -153,8 +176,8 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer" style="border-top:1px solid #f0e8f7;">
-                <button class="btn btn-light btn-sm" data-bs-dismiss="modal" style="border-radius:8px;">Cancel</button>
+            <div class="modal-footer modal-divider">
+                <button class="btn btn-light btn-sm modal-close-btn" data-bs-dismiss="modal">Cancel</button>
                 <button class="btn-add" onclick="saveCustomer()">Save Customer</button>
             </div>
         </div>

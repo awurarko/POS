@@ -64,7 +64,7 @@ async function renderCustomers() {
     const tbody = document.getElementById("customersTable");
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#aaa;padding:32px;">No customers found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="c-empty">No customers found.</td></tr>`;
         renderCustomerPagination(0);
         return;
     }
@@ -79,22 +79,21 @@ async function renderCustomers() {
     tbody.innerHTML = paged.map((c, i) => {
         const realIdx    = customers.findIndex(x => x.id === c.id);
         const custSales  = sales.filter(s => s.customerId === c.id);
-        const tierColor  = c.points >= 200 ? "#b8860b" : c.points >= 100 ? "#6a5080" : "#666";
         const tier       = c.points >= 200 ? "Gold" : c.points >= 100 ? "Silver" : "Bronze";
 
         return `<tr>
-            <td style="font-size:12px;color:#999;">${c.id}</td>
-            <td style="font-weight:500;color:#1f0e26;">${c.name}</td>
+            <td class="c-id">${c.id}</td>
+            <td class="c-name">${c.name}</td>
             <td>${c.phone}</td>
-            <td style="color:#666;font-size:12px;">${c.address || "—"}</td>
+            <td class="c-address">${c.address || "-"}</td>
             <td>
-                <span style="font-weight:600;color:${tierColor};">${c.points}</span>
-                <span style="font-size:10px;color:${tierColor};margin-left:4px;">${tier}</span>
+                <span class="c-points">${c.points}</span>
+                <span class="c-tier">${tier}</span>
             </td>
             <td>
-                <button class="btn btn-sm btn-outline-secondary me-1" style="font-size:11px;" onclick="viewHistory(${realIdx})">History</button>
-                <button class="btn btn-sm btn-warning me-1"            style="font-size:11px;" onclick="openEditModal(${realIdx})">Edit</button>
-                <button class="btn btn-sm btn-danger"                  style="font-size:11px;" onclick="deleteCustomer(${realIdx})">Delete</button>
+                <button class="btn btn-sm c-action c-action-edit me-1" onclick="viewHistory(${realIdx})">History</button>
+                <button class="btn btn-sm c-action c-action-edit me-1" onclick="openEditModal(${realIdx})">Edit</button>
+                <button class="btn btn-sm c-action c-action-delete" onclick="deleteCustomer(${realIdx})">Delete</button>
             </td>
         </tr>`;
     }).join("");
@@ -116,9 +115,9 @@ function renderCustomerPagination(totalItems) {
     const nextDisabled = currentCustomerPage >= totalPages ? "disabled" : "";
 
     wrap.innerHTML = `
-        <button class="btn btn-sm btn-light" ${prevDisabled} onclick="changeCustomerPage(-1)">Prev</button>
+        <button class="page-btn" ${prevDisabled} onclick="changeCustomerPage(-1)">Prev</button>
         <span>Page ${currentCustomerPage} of ${totalPages}</span>
-        <button class="btn btn-sm btn-light" ${nextDisabled} onclick="changeCustomerPage(1)">Next</button>
+        <button class="page-btn" ${nextDisabled} onclick="changeCustomerPage(1)">Next</button>
     `;
 }
 
@@ -136,14 +135,14 @@ function viewHistory(index) {
 
     const tbody = document.getElementById("historyTable");
     if (sales.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#aaa;padding:24px;">No purchases recorded yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="c-empty">No purchases recorded yet.</td></tr>`;
     } else {
         tbody.innerHTML = [...sales].reverse().map(s => `
             <tr>
-                <td style="font-size:12px;">${s.id}</td>
-                <td style="font-size:12px;">${s.dateTime}</td>
-                <td style="font-size:12px;">${s.items.map(i => i.name).join(", ")}</td>
-                <td style="font-weight:600;color:#623c74;">GH₵${s.total.toFixed(2)}</td>
+                <td class="c-id">${s.id}</td>
+                <td class="c-id">${s.dateTime}</td>
+                <td class="c-id">${s.items.map(i => i.name).join(", ")}</td>
+                <td class="history-total">GH₵${s.total.toFixed(2)}</td>
             </tr>`).join("");
     }
 

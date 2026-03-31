@@ -66,11 +66,10 @@ function renderProducts() {
         let badgeClass = "badge-ok", badgeText = "In Stock";
         if (p.stock === 0)     { badgeClass = "badge-out"; badgeText = "Out of Stock"; }
         else if (p.stock <= 5) { badgeClass = "badge-low"; badgeText = "Low Stock"; }
-        const categoryLabel = p.name;
+        const categoryLabel = p.category;
         return `
         <div class="product-card">
             <div class="product-card-body">
-                <div class="product-card-icon">${getIcon(p.name, p.category)}</div>
                 <div class="product-card-name" title="${p.name}">${p.name}</div>
                 <div class="product-card-cat">${categoryLabel} &middot; ${p.barcode || "—"}${p.supplier ? ` &middot; ${p.supplier}` : ""}</div>
                 <div class="product-card-cat stock-row" style="margin-top:2px;">
@@ -79,8 +78,8 @@ function renderProducts() {
                 <div class="product-card-footer">
                     <span class="product-card-price">GH₵${parseFloat(p.price).toFixed(2)}</span>
                     <div class="card-actions">
-                        <button class="btn-icon btn-edit" onclick="openEditModal(${realIdx})">✏️</button>
-                        <button class="btn-icon btn-del"  onclick="deleteProduct(${realIdx})">🗑️</button>
+                        <button class="btn-icon btn-edit" onclick="openEditModal(${realIdx})">Edit</button>
+                        <button class="btn-icon btn-del"  onclick="deleteProduct(${realIdx})">Delete</button>
                     </div>
                 </div>
             </div>

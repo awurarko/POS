@@ -51,6 +51,131 @@ const API_BASE_CANDIDATES = buildApiCandidates();
 let activeBase = API_BASE_CANDIDATES[0];
 const API_TIMEOUT_MS = 10000;
 
+function installErrorDialog() {
+    if (typeof window === "undefined" || window.__smartPosErrorDialogInstalled) return;
+    window.__smartPosErrorDialogInstalled = true;
+
+    function ensureDialog() {
+        if (!document.getElementById("smartposErrorDialogStyle")) {
+            const style = document.createElement("style");
+            style.id = "smartposErrorDialogStyle";
+            style.textContent = `
+                .smartpos-error-backdrop {
+                    position: fixed;
+                    inset: 0;
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(16, 24, 40, 0.55);
+                    padding: 16px;
+                    z-index: 11000;
+                }
+                .smartpos-error-backdrop.open { display: flex; }
+                .smartpos-error-dialog {
+                    width: min(460px, 100%);
+                    background: #ffffff;
+                    border-radius: 14px;
+                    border: 1px solid #e6d7f3;
+                    box-shadow: 0 20px 40px -24px rgba(15, 23, 42, 0.6);
+                    overflow: hidden;
+                    font-family: 'Times New Roman', Times, serif;
+                }
+                .smartpos-error-head {
+                    background: linear-gradient(120deg, #2c0f3b 0%, #1f0e26 100%);
+                    color: #fff;
+                    padding: 12px 16px;
+                    font-size: 16px;
+                    font-weight: 700;
+                }
+                .smartpos-error-body {
+                    padding: 16px;
+                    color: #3a2f42;
+                    font-size: 14px;
+                    line-height: 1.5;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                }
+                .smartpos-error-foot {
+                    padding: 0 16px 16px;
+                    display: flex;
+                    justify-content: flex-end;
+                }
+                .smartpos-error-btn {
+                    border: 1px solid #d2bfeb;
+                    background: #2c0f3b;
+                    color: #fff;
+                    border-radius: 8px;
+                    padding: 7px 16px;
+                    font-size: 13px;
+                    cursor: pointer;
+                    transition: background 0.2s ease;
+                }
+                .smartpos-error-btn:hover { background: #4d1d66; }
+            `;
+            document.head.appendChild(style);
+        }
+
+        let backdrop = document.getElementById("smartposErrorBackdrop");
+        if (!backdrop) {
+            backdrop = document.createElement("div");
+            backdrop.id = "smartposErrorBackdrop";
+            backdrop.className = "smartpos-error-backdrop";
+            backdrop.innerHTML = `
+                <div class="smartpos-error-dialog" role="alertdialog" aria-modal="true" aria-labelledby="smartposErrorTitle" aria-describedby="smartposErrorMessage">
+                    <div class="smartpos-error-head" id="smartposErrorTitle">Error</div>
+                    <div class="smartpos-error-body" id="smartposErrorMessage"></div>
+                    <div class="smartpos-error-foot">
+                        <button type="button" class="smartpos-error-btn" id="smartposErrorCloseBtn">OK</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(backdrop);
+        }
+        return backdrop;
+    }
+
+    function closeDialog() {
+        const backdrop = document.getElementById("smartposErrorBackdrop");
+        if (!backdrop) return;
+        backdrop.classList.remove("open");
+    }
+
+    window.showErrorDialog = function showErrorDialog(message, title = "Error") {
+        const backdrop = ensureDialog();
+        const titleNode = document.getElementById("smartposErrorTitle");
+        const messageNode = document.getElementById("smartposErrorMessage");
+        const closeBtn = document.getElementById("smartposErrorCloseBtn");
+
+        titleNode.textContent = title;
+        messageNode.textContent = String(message || "An unexpected error occurred.");
+        backdrop.classList.add("open");
+
+        closeBtn.onclick = closeDialog;
+        backdrop.onclick = (event) => {
+            if (event.target === backdrop) closeDialog();
+        };
+        closeBtn.focus();
+    };
+
+    const nativeAlert = typeof window.alert === "function" ? window.alert.bind(window) : null;
+    window.nativeAlert = nativeAlert;
+    window.alert = function smartPosCustomAlert(message) {
+        window.showErrorDialog(message, "Error");
+    };
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeDialog();
+    });
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", ensureDialog, { once: true });
+    } else {
+        ensureDialog();
+    }
+}
+
+installErrorDialog();
+
 function getOrderedApiBases() {
     if (!activeBase) return API_BASE_CANDIDATES;
     return [activeBase, ...API_BASE_CANDIDATES.filter(base => base !== activeBase)];

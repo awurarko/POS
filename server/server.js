@@ -9,6 +9,10 @@ const path = require("path");
 const db      = require("./db");
 require("dotenv").config({ path: "env.env" });
 
+const fetchHttp = global.fetch
+    ? global.fetch.bind(global)
+    : (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args));
+
 const app  = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "replace-this-secret-in-production";
@@ -114,12 +118,24 @@ function getPaystackHeaders() {
     };
 }
 
+function getSafeCallbackUrl(value) {
+    const raw = cleanText(value, 300);
+    if (!raw) return "";
+    try {
+        const parsed = new URL(raw);
+        if (!["http:", "https:"].includes(parsed.protocol)) return "";
+        return parsed.toString();
+    } catch {
+        return "";
+    }
+}
+
 async function paystackRequest(url, method = "GET", payload = null) {
     if (!url) {
         throw new Error("Paystack endpoint URL is not configured.");
     }
 
-    const response = await fetch(url, {
+    const response = await fetchHttp(url, {
         method,
         headers: getPaystackHeaders(),
         body: payload ? JSON.stringify(payload) : undefined,
@@ -318,6 +334,7 @@ app.post("/api/payments/paystack/initiate", requireAuth, async (req, res) => {
         const customerName = cleanText(req.body.customerName || "Walk-in Customer", 100);
         const description = cleanText(req.body.description || "POS mobile money payment", 160);
         const externalReference = cleanText(req.body.externalReference, 80);
+        const callbackUrl = getSafeCallbackUrl(req.body.callbackUrl) || getSafeCallbackUrl(PAYSTACK_CALLBACK_URL);
 
         if (amount == null || amount <= 0) {
             return res.status(400).json({ error: "Amount must be greater than zero." });
@@ -339,7 +356,7 @@ app.post("/api/payments/paystack/initiate", requireAuth, async (req, res) => {
             currency: "GHS",
             reference,
             channels: ["mobile_money"],
-            ...(PAYSTACK_CALLBACK_URL ? { callback_url: PAYSTACK_CALLBACK_URL } : {}),
+            ...(callbackUrl ? { callback_url: callbackUrl } : {}),
             metadata: {
                 customer_name: customerName,
                 customer_msisdn: customerMsisdn,

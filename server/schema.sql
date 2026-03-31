@@ -104,3 +104,36 @@ CREATE TABLE IF NOT EXISTS inventory_log (
 
 -- No seed data. Create your first admin user from the setup screen.
 
+-- Sample products seed (safe to rerun because of INSERT IGNORE)
+INSERT IGNORE INTO products (id, name, category, price, stock, barcode, supplier) VALUES
+('P100000001', 'Whole Wheat Bread', 'Food', 16.50, 34, '2000000001', 'Sunrise Distributors'),
+('P100000002', 'White Bread', 'Food', 14.00, 26, '2000000002', 'Sunrise Distributors'),
+('P100000003', 'Long Grain Rice 5kg', 'Food', 92.00, 18, '2000000003', 'Keta Foods'),
+('P100000004', 'Jasmine Rice 5kg', 'Food', 108.00, 11, '2000000004', 'Keta Foods'),
+('P100000005', 'Spaghetti 500g', 'Food', 12.50, 40, '2000000005', 'Prime Grocers'),
+('P100000006', 'Tomato Paste 210g', 'Food', 9.00, 52, '2000000006', 'Prime Grocers'),
+('P100000007', 'Vegetable Oil 1L', 'Food', 19.50, 29, '2000000007', 'Golden Pantry'),
+('P100000008', 'Corn Flakes 500g', 'Food', 26.00, 14, '2000000008', 'Golden Pantry'),
+('P100000009', 'Canned Tuna 170g', 'Food', 18.00, 33, '2000000009', 'Ocean Crest'),
+('P100000010', 'Instant Noodles Pack', 'Food', 7.00, 75, '2000000010', 'Prime Grocers'),
+('P100000011', 'Bottled Water 500ml', 'Beverages', 4.00, 120, '2000000011', 'BluePeak Beverages'),
+('P100000012', 'Bottled Water 1.5L', 'Beverages', 7.50, 80, '2000000012', 'BluePeak Beverages'),
+('P100000013', 'Orange Juice 1L', 'Beverages', 22.00, 24, '2000000013', 'Fresh Valley Drinks'),
+('P100000014', 'Apple Juice 1L', 'Beverages', 22.00, 19, '2000000014', 'Fresh Valley Drinks'),
+('P100000015', 'Malt Drink 330ml', 'Beverages', 8.00, 65, '2000000015', 'City Beverage Hub'),
+('P100000016', 'Cola Soft Drink 1.5L', 'Beverages', 12.00, 46, '2000000016', 'City Beverage Hub'),
+('P100000017', 'Energy Drink 250ml', 'Beverages', 14.00, 31, '2000000017', 'PowerSip Ltd'),
+('P100000018', 'Green Tea 20 Bags', 'Beverages', 28.00, 16, '2000000018', 'PowerSip Ltd'),
+('P100000019', 'Milk Powder 400g', 'Food', 34.00, 22, '2000000019', 'Dairy Plus'),
+('P100000020', 'Chocolate Bar 80g', 'Food', 6.50, 90, '2000000020', 'Sweet Haven'),
+('P100000021', 'Dishwashing Liquid 750ml', 'Household', 15.00, 27, '2000000021', 'Sparkle Homecare'),
+('P100000022', 'Laundry Detergent 2kg', 'Household', 38.00, 17, '2000000022', 'Sparkle Homecare'),
+('P100000023', 'Toilet Tissue 6-Pack', 'Household', 24.00, 37, '2000000023', 'Home Basics Co'),
+('P100000024', 'Paper Towels 2-Pack', 'Household', 19.00, 25, '2000000024', 'Home Basics Co'),
+('P100000025', 'Multipurpose Cleaner 500ml', 'Household', 13.00, 30, '2000000025', 'NeatNest Supplies'),
+('P100000026', 'Hand Soap 500ml', 'Household', 10.50, 44, '2000000026', 'NeatNest Supplies'),
+('P100000027', 'LED Bulb 12W', 'Electronics', 18.00, 41, '2000000027', 'Brightline Electricals'),
+('P100000028', 'Extension Cable 4-Way', 'Electronics', 46.00, 13, '2000000028', 'Brightline Electricals'),
+('P100000029', 'USB-C Charging Cable', 'Electronics', 29.00, 32, '2000000029', 'Device Depot'),
+('P100000030', 'Wireless Mouse', 'Electronics', 85.00, 12, '2000000030', 'Device Depot');
+

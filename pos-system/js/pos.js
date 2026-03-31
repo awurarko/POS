@@ -532,6 +532,7 @@ async function checkout() {
                 customerName: customerName || "Walk-in Customer",
                 channel: momoNetwork,
                 description: `SmartPOS checkout by ${cashierName}`,
+                callbackUrl: `${window.location.origin}${window.location.pathname}`,
                 externalReference: buildRequestRef(),
             });
 
@@ -572,7 +573,13 @@ async function checkout() {
             });
 
             if (init.authorizationUrl) {
-                window.open(init.authorizationUrl, "_blank", "noopener");
+                const popup = window.open(init.authorizationUrl, "_blank", "noopener");
+                const blocked = !popup || popup.closed || typeof popup.closed === "undefined";
+                if (blocked) {
+                    showToast("Opening Paystack in this tab...");
+                    window.location.assign(init.authorizationUrl);
+                    return;
+                }
                 showToast("Paystack opened. Complete payment in the new tab. Verifying automatically...");
             }
 

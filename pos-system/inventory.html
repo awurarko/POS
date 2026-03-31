@@ -57,9 +57,9 @@
 
             <!-- Inventory Table -->
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h4>Stock Levels</h4>
+                <h4 class="inventory-head">Stock Levels</h4>
                 <div>
-                    <select class="form-select d-inline w-auto" id="filterSelect" onchange="renderInventory()">
+                    <select class="form-select d-inline w-auto inventory-filter" id="filterSelect" onchange="renderInventory()">
                         <option value="all">All Items</option>
                         <option value="low">Low Stock (â‰¤5)</option>
                         <option value="out">Out of Stock</option>
@@ -67,19 +67,21 @@
                 </div>
             </div>
 
-            <table class="table table-striped table-hover">
-                <thead class="table-header">
-                    <tr>
-                        <th>ID</th>
-                        <th>Product</th>
-                        <th>Category</th>
-                        <th>Current Stock</th>
-                        <th>Status</th>
-                        <th>Restock</th>
-                    </tr>
-                </thead>
-                <tbody id="inventoryTable"></tbody>
-            </table>
+            <div class="inventory-table-wrap">
+                <table class="table table-hover inventory-table">
+                    <thead class="table-header">
+                        <tr>
+                            <th>ID</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Current Stock</th>
+                            <th>Status</th>
+                            <th>Restock</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTable"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -88,7 +90,7 @@
 <div class="modal fade" id="restockModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
-            <div class="modal-header" style="background-color:#1f0e26; color:white;">
+            <div class="modal-header">
                 <h5 class="modal-title">Restock: <span id="restockName"></span></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>

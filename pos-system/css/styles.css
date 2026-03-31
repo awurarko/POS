@@ -244,8 +244,10 @@
 }
 
 .stat-card {
-    border: 1px solid #e8e0f2;
+    border: 1px solid #d8e2f1;
     border-radius: 12px;
+    background: linear-gradient(125deg, #f6fbff 0%, #ffffff 52%, #eef8ff 100%);
+    box-shadow: 0 18px 40px -36px rgba(2, 132, 199, 0.55);
 }
 
 .section-title {
@@ -723,7 +725,7 @@
 }
 
 .table-header th {
-    background-color: #1f0e26;
+    background-color: #6a5080;
     color: #ffffff;
     border: none;
 }
@@ -855,18 +857,100 @@
     font-size: 14px;
 }
 
+.inventory-head {
+    font-family: 'Times New Roman', Times, serif;
+    color: #4f3d63;
+    font-size: 1.3rem;
+    margin: 0;
+}
+
+.inventory-filter {
+    border: 1px solid #d9cfea;
+    border-radius: 10px;
+    color: #4f3d63;
+    background: #ffffff;
+    font-size: 13px;
+    padding: 7px 12px;
+    box-shadow: none;
+}
+
+.inventory-filter:focus {
+    border-color: #8d6c9f;
+    box-shadow: 0 0 0 3px rgba(141, 108, 159, 0.16);
+}
+
+.inventory-table-wrap {
+    border: 1px solid #e6def3;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.inventory-table {
+    margin: 0;
+}
+
+.inventory-table tbody td {
+    border-bottom: 1px solid #f1ebf8;
+    vertical-align: middle;
+}
+
+.inventory-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.inventory-table tbody tr:hover {
+    background: #faf7ff;
+}
+
+.inventory-status {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.inventory-status.in {
+    color: #166534;
+}
+
+.inventory-status.out {
+    color: #b91c1c;
+}
+
+.inventory-status.low {
+    color: #7c3a95;
+}
+
+.inventory-stock-low {
+    color: #7c3a95;
+    font-weight: 700;
+}
+
 .restock-btn {
     min-width: 90px;
-    border-radius: 15px;
-    background-color: #8d6c9f;
-    border: none;
-    color: white;
-    font-size: 13px;
-    padding: 4px 12px;
+    border: 1px solid #6a5080;
+    background: #6a5080;
+    color: #ffffff;
+    border-radius: 8px;
+    font-size: 12px;
+    padding: 5px 12px;
 }
 
 .restock-btn:hover {
-    background-color: #7a5c8a;
+    background: #5b456f;
+    border-color: #5b456f;
+    color: #ffffff;
+}
+
+#lowStockAlert {
+    border: 1px solid #eadcf8;
+    background: #f8f3ff;
+    color: #5f4b74;
+}
+
+#restockModal .modal-header {
+    background-color: #6a5080;
+    color: #ffffff;
 }
 
 #sidebarToggle {

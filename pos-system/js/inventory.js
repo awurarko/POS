@@ -42,9 +42,9 @@ async function renderInventory() {
     const tbody = document.getElementById("inventoryTable");
     tbody.innerHTML = filtered.map((p, i) => {
         let statusBadge = "";
-        if (p.stock === 0) statusBadge = `<span class="badge bg-danger">Out of Stock</span>`;
-        else if (p.stock <= 5) statusBadge = `<span class="badge bg-warning text-dark">Low Stock</span>`;
-        else statusBadge = `<span class="badge bg-success">In Stock</span>`;
+        if (p.stock === 0) statusBadge = `<span class="inventory-status out">Out of Stock</span>`;
+        else if (p.stock <= 5) statusBadge = `<span class="inventory-status low">Low Stock</span>`;
+        else statusBadge = `<span class="inventory-status in">In Stock</span>`;
 
         // Find real index in full products array
         const realIndex = products.findIndex(prod => prod.id === p.id);
@@ -54,7 +54,7 @@ async function renderInventory() {
             <td>${p.id}</td>
             <td>${p.name}</td>
             <td>${p.category}</td>
-            <td class="${p.stock <= 5 ? 'text-danger fw-bold' : ''}">${p.stock}</td>
+            <td class="${p.stock <= 5 ? 'inventory-stock-low' : ''}">${p.stock}</td>
             <td>${statusBadge}</td>
             <td><button class="btn restock-btn" onclick="openRestockModal(${realIndex}, '${p.name}')">Restock</button></td>
         </tr>`;

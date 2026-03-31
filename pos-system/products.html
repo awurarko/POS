@@ -56,15 +56,21 @@
             grid-template-columns: repeat(4, 1fr);
             gap: 14px;
             margin-bottom: 22px;
+            align-items: stretch;
         }
         .stat-box {
-            background: white;
-            border-radius: 10px;
-            padding: 14px 18px;
-            border: 1px solid #e8e0f2;
+            border-radius: 16px;
+            border: 1px solid #d8e2f1;
+            background: linear-gradient(125deg, #f6fbff 0%, #ffffff 52%, #eef8ff 100%);
+            box-shadow: 0 18px 40px -36px rgba(2, 132, 199, 0.55);
+            padding: 12px 14px;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         .stat-box .s-label { font-size: 11px; color: #9a8aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-        .stat-box .s-value { font-size: 1.6rem; font-weight: 700; font-family: 'Times New Roman', Times, serif; line-height: 1; }
+        .stat-box .s-value { font-size: clamp(1.45rem, 3.4vw, 1.95rem); font-weight: 700; font-family: 'Times New Roman', Times, serif; line-height: 1.1; }
 
         /* Pills */
         .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }

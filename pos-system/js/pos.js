@@ -57,6 +57,16 @@ function hideReceiptSuccessTick() {
     tick.style.display = "none";
 }
 
+function cleanupReceiptModalArtifacts() {
+    // Ensure backdrop/body state is fully reset after closing the receipt modal.
+    const anyOpenModal = document.querySelector(".modal.show");
+    if (!anyOpenModal) {
+        document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
+        document.body.classList.remove("modal-open");
+        document.body.style.removeProperty("padding-right");
+    }
+}
+
 function setScanStatus(message) {
     const status = document.getElementById("scanStatus");
     if (status) status.innerText = message;
@@ -248,7 +258,7 @@ function startPendingPaystackWatcher() {
     pendingPaystackWatcher = setInterval(() => {
         if (document.hidden) return;
         resumePendingPaystackCheckout();
-    }, 12000);
+    }, 4000);
 }
 
 function isMobileMoneyMethod(method) {
@@ -572,12 +582,12 @@ async function checkout() {
                 if (paymentStatus === "PENDING") {
                     showToast("Payment is processing. Sale will auto-record once Paystack confirms.");
                 } else {
-                    alert("Mobile money payment was not completed. Sale was not recorded.");
+                    showToast("Payment not confirmed yet. We'll keep checking in the background.");
                 }
                 return;
             }
         } catch (e) {
-            alert("Paystack payment failed: " + e.message);
+            showToast("Paystack payment could not be confirmed right now. We'll retry automatically.");
             return;
         }
     }
@@ -627,8 +637,8 @@ async function checkout() {
 }
 
 async function waitForPaystackSuccess(reference) {
-    const maxChecks = 180;
-    const delayMs = 5000;
+    const maxChecks = 240;
+    const delayMs = 3000;
     let lastKnown = "PENDING";
 
     for (let i = 0; i < maxChecks; i++) {
@@ -718,6 +728,7 @@ function closeReceiptFallback() {
     modalEl.style.display = "none";
     document.body.classList.remove("modal-open");
     hideReceiptSuccessTick();
+    cleanupReceiptModalArtifacts();
 }
 
 async function getAllCustomers() {
@@ -792,6 +803,14 @@ document.addEventListener("click", (e) => {
 document.addEventListener("DOMContentLoaded", async () => {
     startPendingPaystackWatcher();
     await resumePendingPaystackCheckout();
+
+    // Browsers throttle timers heavily in background tabs. Re-check immediately when user returns.
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) resumePendingPaystackCheckout();
+    });
+    window.addEventListener("focus", () => {
+        resumePendingPaystackCheckout();
+    });
 
     await fetchProducts();
     renderProductList();
@@ -870,7 +889,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const receiptModalEl = document.getElementById("receiptModal");
     if (receiptModalEl) {
         receiptModalEl.addEventListener("hide.bs.modal", hideReceiptSuccessTick);
-        receiptModalEl.addEventListener("hidden.bs.modal", hideReceiptSuccessTick);
+        receiptModalEl.addEventListener("hidden.bs.modal", () => {
+            hideReceiptSuccessTick();
+            cleanupReceiptModalArtifacts();
+        });
     }
 
     window.addEventListener("beforeunload", stopBarcodeScanner);

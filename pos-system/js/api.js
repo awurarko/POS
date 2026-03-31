@@ -66,8 +66,8 @@ async function apiFetch(path, options = {}) {
         const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
         try {
-            let res;
             let networkError;
+            let lastAppError = null;
 
             for (const base of getOrderedApiBases()) {
                 try {
@@ -76,13 +76,44 @@ async function apiFetch(path, options = {}) {
                         headers.Authorization = `Bearer ${token}`;
                     }
 
-                    res = await fetch(base + path, {
+                    const res = await fetch(base + path, {
                         headers,
                         ...options,
                         signal: controller.signal,
                     });
+
+                    const text = await res.text();
+                    let data = {};
+                    if (text) {
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            // Some wrong origins return HTML pages for /api/* routes.
+                            // Skip those and try the next candidate.
+                            if (/^\s*</.test(text)) {
+                                lastAppError = new Error(`Unexpected HTML response from ${base}${path}`);
+                                continue;
+                            }
+                            lastAppError = new Error("Invalid response from API.");
+                            continue;
+                        }
+                    }
+
+                    if (res.status === 401 && !path.startsWith("/login") && !path.startsWith("/setup/")) {
+                        if (typeof clearSession === "function") clearSession();
+                        if (!window.location.pathname.endsWith("index.html")) {
+                            window.location.href = "index.html";
+                        }
+                        throw new Error("Your session expired. Please sign in again.");
+                    }
+
+                    if (!res.ok) {
+                        lastAppError = new Error(data.error || "Server error");
+                        continue;
+                    }
+
                     activeBase = base;
-                    break;
+                    return data;
                 } catch (err) {
                     networkError = err;
                     // Retry with another candidate only for network-level failures.
@@ -92,23 +123,7 @@ async function apiFetch(path, options = {}) {
                 }
             }
 
-            if (!res) {
-                throw networkError || new Error("Network request failed");
-            }
-
-            const text = await res.text();
-            const data = text ? JSON.parse(text) : {};
-
-            if (res.status === 401 && !path.startsWith("/login") && !path.startsWith("/setup/")) {
-                if (typeof clearSession === "function") clearSession();
-                if (!window.location.pathname.endsWith("index.html")) {
-                    window.location.href = "index.html";
-                }
-                throw new Error("Your session expired. Please sign in again.");
-            }
-
-            if (!res.ok) throw new Error(data.error || "Server error");
-            return data;
+            throw lastAppError || networkError || new Error("Network request failed");
         } catch (error) {
             if (attempt >= retries) {
                 if (error.name === "AbortError") {
@@ -176,4 +191,5 @@ const API = {
     // â”€â”€ Dashboard stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     getStats: () => apiFetch("/stats"),
     getReportsMvp: () => apiFetch("/reports/mvp"),
+
 };

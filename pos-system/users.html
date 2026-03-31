@@ -5,6 +5,87 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <script src="js/auth.js"></script>
+    <style>
+        .users-table-wrap {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .users-chip {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            border: 1px solid #d4dce6;
+            color: #334155;
+            background: #f8fafc;
+        }
+
+        .users-chip.role-admin,
+        .users-chip.role-manager,
+        .users-chip.role-cashier {
+            border-color: #d4dce6;
+            color: #334155;
+            background: #f8fafc;
+        }
+
+        .users-chip.status-active {
+            border-color: #c8d7eb;
+            color: #075985;
+            background: #f0f7ff;
+        }
+
+        .users-chip.status-inactive {
+            border-color: #d4dce6;
+            color: #475569;
+            background: #f8fafc;
+        }
+
+        .users-action-btn {
+            border-radius: 8px;
+            font-size: 12px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #4f3d63;
+            padding: 4px 10px;
+        }
+
+        .users-action-btn:hover {
+            border-color: #94a3b8;
+            background: #f8fafc;
+        }
+
+        .users-action-btn.danger {
+            border-color: #fecaca;
+            color: #b91c1c;
+            background: #fff5f5;
+        }
+
+        .users-action-btn.danger:hover {
+            border-color: #fca5a5;
+            background: #fee2e2;
+        }
+
+        .users-add-btn {
+            border-radius: 10px;
+            border: 1px solid #6a5080;
+            background: #6a5080;
+            color: #ffffff;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .users-add-btn:hover {
+            background: #5b456f;
+            border-color: #5b456f;
+            color: #ffffff;
+        }
+    </style>
 </head>
 <body id="body">
 <div class="container-fluid">
@@ -21,22 +102,24 @@
         <div class="col-md-10 page-wrap">
             <div class="page-header">
                 <h2 class="page-title">User Management</h2>
-                <button class="btn" id="checkout-button" onclick="openAddUserModal()">+ Add User</button>
+                <button class="btn users-add-btn" onclick="openAddUserModal()">+ Add User</button>
             </div>
 
-            <table class="table table-striped table-hover">
-                <thead class="table-header">
-                    <tr>
-                        <th>ID</th>
-                        <th>Username</th>
-                        <th>Full Name</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="usersTable"></tbody>
-            </table>
+            <div class="users-table-wrap">
+                <table class="table table-striped table-hover mb-0">
+                    <thead class="table-header">
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTable"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -82,7 +165,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn" id="checkout-button" onclick="saveUser()">Save User</button>
+                <button class="btn users-add-btn" onclick="saveUser()">Save User</button>
             </div>
         </div>
     </div>

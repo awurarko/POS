@@ -18,19 +18,23 @@ function renderUsers() {
     const users = getUsers();
     const tbody = document.getElementById("usersTable");
     tbody.innerHTML = users.map((u, i) => {
-        const rc = u.role === "Admin" ? "bg-danger" : u.role === "Manager" ? "bg-warning text-dark" : "bg-info text-dark";
+        const roleClass = `role-${sanitizeClass(u.role)}`;
         return `<tr>
             <td>${u.id}</td>
             <td>${u.username}</td>
             <td>${u.fullName}</td>
-            <td><span class="badge ${rc}">${u.role}</span></td>
-            <td><span class="badge ${u.status === "Active" ? "bg-success" : "bg-secondary"}">${u.status}</span></td>
+            <td><span class="users-chip ${roleClass}">${u.role}</span></td>
+            <td><span class="users-chip ${u.status === "Active" ? "status-active" : "status-inactive"}">${u.status}</span></td>
             <td>
-                <button class="btn btn-sm btn-warning me-1" onclick="openEditUserModal(${i})">Edit</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteUser(${i})">Delete</button>
+                <button class="btn btn-sm users-action-btn me-1" onclick="openEditUserModal(${i})">Edit</button>
+                <button class="btn btn-sm users-action-btn danger" onclick="deleteUser(${i})">Delete</button>
             </td>
         </tr>`;
     }).join("");
+}
+
+function sanitizeClass(value) {
+    return String(value || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
 }
 
 function openAddUserModal() {

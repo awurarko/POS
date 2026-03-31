@@ -150,8 +150,14 @@ function normalizePaystackStatus(payload) {
     ).toLowerCase();
 
     if (["success", "successful", "paid", "completed"].includes(raw)) return "SUCCESS";
-    if (["pending", "processing", "in_progress", "inprogress"].includes(raw)) return "PENDING";
-    return "FAILED";
+
+    // Explicit terminal failure states.
+    if (["failed", "abandoned", "cancelled", "canceled", "reversed", "declined", "error"].includes(raw)) {
+        return "FAILED";
+    }
+
+    // Treat every other state as in-flight so checkout can keep polling.
+    return "PENDING";
 }
 
 function issueAccessToken(user) {

@@ -21,10 +21,9 @@ async function login() {
     showError("");
     setAuthLoading(true, "login");
     try {
-        const hashed = await hashPassword(password);
-        const user   = await API.login(username, hashed);
-        saveSession(user);
-        window.location.href = getHomePage(user.role);
+        const result = await API.login(username, password);
+        saveSession(result.user, result.token);
+        window.location.href = getHomePage(result.user.role);
     } catch (e) {
         showError(e.message || "Invalid username or password.");
     } finally {
@@ -71,11 +70,10 @@ async function createFirstAdmin() {
     showSetupError("");
     setAuthLoading(true, "setup");
     try {
-        const hashed = await hashPassword(password);
-        await API.createFirstAdmin({ username, password: hashed, fullName });
-        const user = await API.login(username, hashed);
-        saveSession(user);
-        window.location.href = getHomePage(user.role);
+        await API.createFirstAdmin({ username, password, fullName });
+        const result = await API.login(username, password);
+        saveSession(result.user, result.token);
+        window.location.href = getHomePage(result.user.role);
     } catch (e) {
         showSetupError(e.message || "Setup failed.");
     } finally {

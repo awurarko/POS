@@ -1,19 +1,48 @@
-// Central API client — replaces all localStorage calls
+﻿// Central API client â€” replaces all localStorage calls
 // All functions return parsed JSON or throw on error
 
 function buildApiCandidates() {
     const host = window.location.hostname || "localhost";
     const protocol = window.location.protocol === "https:" ? "https:" : "http:";
-    const manual = window.localStorage.getItem("smartpos.apiBase") || "";
+    const apiBaseFromQuery = new URLSearchParams(window.location.search).get("apiBase");
+    if (apiBaseFromQuery && apiBaseFromQuery.trim()) {
+        window.localStorage.setItem("smartpos.apiBase", apiBaseFromQuery.trim());
+    }
+
+    const manual = (window.localStorage.getItem("smartpos.apiBase") || "").trim();
+    const allowRemoteOnLocalhost = window.localStorage.getItem("smartpos.allowRemoteOnLocalhost") === "true";
     const deployedSameOrigin = `${window.location.origin}/api`;
     const isLocalHost = ["localhost", "127.0.0.1"].includes(host);
 
-    const candidates = [
-        manual.trim(),
-        isLocalHost ? `${protocol}//${host}:3001/api` : deployedSameOrigin,
-        "http://localhost:3001/api",
-        "http://127.0.0.1:3001/api",
-    ].filter(Boolean);
+    const isLocalApiBase = (value) => {
+        if (!value) return false;
+        try {
+            const parsed = new URL(value, window.location.origin);
+            return ["localhost", "127.0.0.1"].includes(parsed.hostname);
+        } catch {
+            return false;
+        }
+    };
+
+    // Prevent stale deployed overrides from breaking localhost login/testing,
+    // unless user explicitly opted in to share data with deployed backend.
+    if (isLocalHost && manual && !isLocalApiBase(manual) && !allowRemoteOnLocalhost) {
+        window.localStorage.removeItem("smartpos.apiBase");
+    }
+
+    const candidates = isLocalHost
+        ? [
+            `${protocol}//${host}:3001/api`,
+            "http://localhost:3001/api",
+            "http://127.0.0.1:3001/api",
+            isLocalApiBase(manual) ? manual : "",
+        ].filter(Boolean)
+        : [
+            manual,
+            deployedSameOrigin,
+            "http://localhost:3001/api",
+            "http://127.0.0.1:3001/api",
+        ].filter(Boolean);
 
     return [...new Set(candidates)];
 }
@@ -30,6 +59,7 @@ function getOrderedApiBases() {
 async function apiFetch(path, options = {}) {
     const method = (options.method || "GET").toUpperCase();
     const retries = method === "GET" ? 1 : 0;
+    const token = typeof getToken === "function" ? getToken() : (sessionStorage.getItem("authToken") || "");
 
     for (let attempt = 0; attempt <= retries; attempt++) {
         const controller = new AbortController();
@@ -41,8 +71,13 @@ async function apiFetch(path, options = {}) {
 
             for (const base of getOrderedApiBases()) {
                 try {
+                    const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+                    if (token && !path.startsWith("/login") && !path.startsWith("/setup/")) {
+                        headers.Authorization = `Bearer ${token}`;
+                    }
+
                     res = await fetch(base + path, {
-                        headers: { "Content-Type": "application/json" },
+                        headers,
                         ...options,
                         signal: controller.signal,
                     });
@@ -63,6 +98,14 @@ async function apiFetch(path, options = {}) {
 
             const text = await res.text();
             const data = text ? JSON.parse(text) : {};
+
+            if (res.status === 401 && !path.startsWith("/login") && !path.startsWith("/setup/")) {
+                if (typeof clearSession === "function") clearSession();
+                if (!window.location.pathname.endsWith("index.html")) {
+                    window.location.href = "index.html";
+                }
+                throw new Error("Your session expired. Please sign in again.");
+            }
 
             if (!res.ok) throw new Error(data.error || "Server error");
             return data;
@@ -85,29 +128,29 @@ async function apiFetch(path, options = {}) {
     }
 }
 
-// ── Auth ──────────────────────────────────────────────────────
+// â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const API = {
 
     setupStatus: () => apiFetch("/setup/status"),
     createFirstAdmin: (data) => apiFetch("/setup/first-admin", { method:"POST", body: JSON.stringify(data) }),
 
-    login: (username, hashedPassword) =>
-        apiFetch("/login", { method:"POST", body: JSON.stringify({ username, password: hashedPassword }) }),
+    login: (username, password) =>
+        apiFetch("/login", { method:"POST", body: JSON.stringify({ username, password }) }),
 
-    // ── Users ─────────────────────────────────────────────────
+    // â”€â”€ Users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     getUsers:    ()       => apiFetch("/users"),
     createUser:  (data)   => apiFetch("/users",      { method:"POST",   body: JSON.stringify(data) }),
     updateUser:  (id, d)  => apiFetch(`/users/${id}`,{ method:"PUT",    body: JSON.stringify(d)    }),
     deleteUser:  (id)     => apiFetch(`/users/${id}`,{ method:"DELETE" }),
 
-    // ── Products ──────────────────────────────────────────────
+    // â”€â”€ Products â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     getProducts:   ()      => apiFetch("/products"),
     getProductByBarcode: (code) => apiFetch(`/products/barcode/${encodeURIComponent(code)}`),
     createProduct: (data)  => apiFetch("/products",       { method:"POST",   body: JSON.stringify(data) }),
     updateProduct: (id, d) => apiFetch(`/products/${id}`, { method:"PUT",    body: JSON.stringify(d)    }),
     deleteProduct: (id)    => apiFetch(`/products/${id}`, { method:"DELETE" }),
 
-    // ── Customers ─────────────────────────────────────────────
+    // â”€â”€ Customers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     getCustomers:   ()      => apiFetch("/customers"),
     createCustomer: (data)  => apiFetch("/customers",       { method:"POST",   body: JSON.stringify(data) }),
     updateCustomer: (id, d) => apiFetch(`/customers/${id}`, { method:"PUT",    body: JSON.stringify(d)    }),
@@ -115,16 +158,22 @@ const API = {
     addCustomerPoints: (id, points) =>
         apiFetch(`/customers/${id}/points`, { method:"POST", body: JSON.stringify({ points }) }),
 
-    // ── Sales ─────────────────────────────────────────────────
+    // â”€â”€ Sales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     getSales:    ()     => apiFetch("/sales"),
     createSale:  (data) => apiFetch("/sales", { method:"POST", body: JSON.stringify(data) }),
     clearSales:  ()     => apiFetch("/sales", { method:"DELETE" }),
 
-    // ── Inventory ─────────────────────────────────────────────
+    // â”€â”€ Paystack payments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    initiatePaystackPayment: (data) =>
+        apiFetch("/payments/paystack/initiate", { method:"POST", body: JSON.stringify(data) }),
+    getPaystackPaymentStatus: (reference) =>
+        apiFetch(`/payments/paystack/status/${encodeURIComponent(reference)}`),
+
+    // â”€â”€ Inventory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     restock: (productId, qty) =>
         apiFetch("/inventory/restock", { method:"POST", body: JSON.stringify({ productId, qty }) }),
 
-    // ── Dashboard stats ───────────────────────────────────────
+    // â”€â”€ Dashboard stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     getStats: () => apiFetch("/stats"),
     getReportsMvp: () => apiFetch("/reports/mvp"),
 };

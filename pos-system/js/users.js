@@ -69,13 +69,12 @@ async function saveUser() {
     try {
         if (index === -1) {
             if (!password) { alert("Please set a password for the new user."); return; }
-            const hashed = await hashPassword(password);
-            await API.createUser({ username, password: hashed, fullName, role, status });
+            await API.createUser({ username, password, fullName, role, status });
         } else {
             const user = getUsers()[index];
             const payload = { username, fullName, role, status };
             if (password) {
-                payload.password = await hashPassword(password);
+                payload.password = password;
             }
             await API.updateUser(user.id, payload);
         }

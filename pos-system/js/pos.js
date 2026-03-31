@@ -1,4 +1,4 @@
-let cart = [];
+﻿let cart = [];
 let scannerStream = null;
 let scannerTimer = null;
 let barcodeDetector = null;
@@ -46,6 +46,12 @@ function showReceiptSuccessTick() {
     const tick = document.getElementById("receiptSuccessTick");
     if (!tick) return;
     tick.style.display = "block";
+}
+
+function hideReceiptSuccessTick() {
+    const tick = document.getElementById("receiptSuccessTick");
+    if (!tick) return;
+    tick.style.display = "none";
 }
 
 function setScanStatus(message) {
@@ -101,7 +107,7 @@ function renderProductList(filter = "") {
             <div class="${tileClass}" onclick="addToCart('${p.id}')">
                 <div class="icon">${getIcon(p.name, p.category)}</div>
                 <div class="p-name">${p.name}</div>
-                <div class="p-price">GH₵${price.toFixed(2)}</div>
+                <div class="p-price">GHâ‚µ${price.toFixed(2)}</div>
                 <div class="p-stock ${stockClass}">${stockText}</div>
             </div>`;
     }).join("");
@@ -136,6 +142,10 @@ function changeProductPage(delta, filter) {
 
 function buildRequestRef() {
     return `sale-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function isMobileMoneyMethod(method) {
+    return String(method || "").toLowerCase().startsWith("mobile money");
 }
 
 function addToCart(productId) {
@@ -216,12 +226,12 @@ function renderCart() {
         <div class="cart-item">
             <span class="ci-name">${item.name}</span>
             <div class="qty-controls">
-                <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
+                <button class="qty-btn" onclick="changeQty(${i}, -1)">âˆ’</button>
                 <span style="min-width:16px;text-align:center;">${item.qty}</span>
                 <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
             </div>
-            <span class="ci-subtotal">GH₵${(item.price * item.qty).toFixed(2)}</span>
-            <button class="rm-btn" onclick="removeItem(${i})">✕</button>
+            <span class="ci-subtotal">GHâ‚µ${(item.price * item.qty).toFixed(2)}</span>
+            <button class="rm-btn" onclick="removeItem(${i})">âœ•</button>
         </div>
     `).join("");
 
@@ -359,7 +369,8 @@ async function checkout() {
         return;
     }
 
-    const paymentMethod = document.getElementById("paymentMethod")?.value || "Cash";
+    const paymentMethodLabel = document.getElementById("paymentMethod")?.value || "Cash";
+    const paymentMethod = isMobileMoneyMethod(paymentMethodLabel) ? "Mobile Money" : paymentMethodLabel;
     const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
     const discount = getDiscountValue(subtotal);
     const total = Math.max(0, subtotal - discount);
@@ -372,8 +383,15 @@ async function checkout() {
     }
 
     const payerNumber = (document.getElementById("payerNumber")?.value || "").trim();
-    if (paymentMethod === "Mobile Money" && !payerNumber) {
+    const payerEmailField = document.getElementById("payerEmail") || document.getElementById("payerEmailAlways");
+    const payerEmail = (payerEmailField?.value || "").trim().toLowerCase();
+    const momoNetwork = (document.getElementById("momoNetwork")?.value || "mtn-gh").trim();
+    if (isMobileMoneyMethod(paymentMethodLabel) && !payerNumber) {
         alert("Please enter the payer number for this mobile money payment.");
+        return;
+    }
+    if (isMobileMoneyMethod(paymentMethodLabel) && (!payerEmail || !payerEmail.includes("@"))) {
+        alert("Please enter a valid payer email for Paystack.");
         return;
     }
 
@@ -383,6 +401,41 @@ async function checkout() {
     const customerId = await ensureCustomerByName(customerName);
 
     const items = cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price }));
+
+    let provider = null;
+    let providerReference = null;
+    let paymentStatus = null;
+
+    if (isMobileMoneyMethod(paymentMethodLabel)) {
+        try {
+            const init = await API.initiatePaystackPayment({
+                amount: total,
+                customerMsisdn: payerNumber,
+                customerEmail: payerEmail,
+                customerName: customerName || "Walk-in Customer",
+                channel: momoNetwork,
+                description: `SmartPOS checkout by ${cashierName}`,
+                externalReference: buildRequestRef(),
+            });
+
+            provider = "Paystack";
+            providerReference = init.reference;
+
+            if (init.authorizationUrl) {
+                window.open(init.authorizationUrl, "_blank", "noopener");
+                alert("Paystack payment page opened. Complete payment, then click OK to continue verification.");
+            }
+
+            paymentStatus = await waitForPaystackSuccess(providerReference);
+            if (paymentStatus !== "SUCCESS") {
+                alert("Mobile money payment was not completed. Sale was not recorded.");
+                return;
+            }
+        } catch (e) {
+            alert("Paystack payment failed: " + e.message);
+            return;
+        }
+    }
 
     let result;
     try {
@@ -396,6 +449,9 @@ async function checkout() {
             paymentMethod,
             cashReceived,
             payerNumber: payerNumber || null,
+            provider,
+            providerReference,
+            paymentStatus,
             items,
             requestRef: buildRequestRef(),
         });
@@ -423,7 +479,7 @@ async function checkout() {
         parseFloat(receipt.subtotal || 0),
         parseFloat(receipt.discount || 0),
         parseFloat(receipt.total || 0),
-        receipt.paymentMethod,
+        paymentMethodLabel,
         receipt.items || items,
         receipt.cashReceived,
         result.changeDue,
@@ -439,11 +495,28 @@ async function checkout() {
     if (cashInput) cashInput.value = "";
     const payerInput = document.getElementById("payerNumber");
     if (payerInput) payerInput.value = "";
+    const payerEmailInput = document.getElementById("payerEmail");
+    if (payerEmailInput) payerEmailInput.value = "";
+    const payerEmailAlwaysInput = document.getElementById("payerEmailAlways");
+    if (payerEmailAlwaysInput) payerEmailAlwaysInput.value = "";
     const discountInput = document.getElementById("discountInput");
     if (discountInput) discountInput.value = "0.00";
 
     await fetchProducts();
     renderProductList(document.getElementById("searchInput")?.value || "");
+}
+
+async function waitForPaystackSuccess(reference) {
+    const maxChecks = 24;
+    const delayMs = 5000;
+
+    for (let i = 0; i < maxChecks; i++) {
+        const result = await API.getPaystackPaymentStatus(reference);
+        if (result.status === "SUCCESS") return "SUCCESS";
+        if (result.status === "FAILED") return "FAILED";
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+    return "PENDING";
 }
 
 function showReceipt(saleId, dateTime, subtotal, discount, total, paymentMethod, items, cashReceived, changeDue, customerName, payerNumber) {
@@ -469,27 +542,27 @@ function showReceipt(saleId, dateTime, subtotal, discount, total, paymentMethod,
                     <tr style="border-bottom:0.5px solid #f0f0f0;">
                         <td style="padding:4px 0;">${i.name}</td>
                         <td style="text-align:center;">${i.qty}</td>
-                        <td style="text-align:right;">GH₵${(parseFloat(i.price || 0) * parseInt(i.qty || 0, 10)).toFixed(2)}</td>
+                        <td style="text-align:right;">GHâ‚µ${(parseFloat(i.price || 0) * parseInt(i.qty || 0, 10)).toFixed(2)}</td>
                     </tr>
                 `).join("")}
             </tbody>
         </table>
         <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12px;color:#666;">
-            <span>Subtotal</span><span>GH₵${subtotal.toFixed(2)}</span>
+            <span>Subtotal</span><span>GHâ‚µ${subtotal.toFixed(2)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:12px;color:#666;">
-            <span>Discount</span><span>GH₵${discount.toFixed(2)}</span>
+            <span>Discount</span><span>GHâ‚µ${discount.toFixed(2)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-weight:700;margin-top:6px;font-size:14px;">
-            <span>Total</span><span>GH₵${total.toFixed(2)}</span>
+            <span>Total</span><span>GHâ‚µ${total.toFixed(2)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:4px;">
             <span>Payment</span><span>${paymentMethod}</span>
         </div>
         ${customerName ? `<div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Customer</span><span>${customerName}</span></div>` : ""}
         ${paymentMethod === "Cash"
-            ? `<div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Cash</span><span>GH₵${(cashReceived || 0).toFixed(2)}</span></div>
-               <div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Change</span><span>GH₵${(changeDue || 0).toFixed(2)}</span></div>`
+            ? `<div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Cash</span><span>GHâ‚µ${(cashReceived || 0).toFixed(2)}</span></div>
+               <div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Change</span><span>GHâ‚µ${(changeDue || 0).toFixed(2)}</span></div>`
             : `<div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Payer</span><span>${payerNumber || "-"}</span></div>`}
         <p style="text-align:center;color:#aaa;font-size:11px;margin-top:12px;">Thank you for your purchase!</p>
     `;
@@ -522,6 +595,7 @@ function closeReceiptFallback() {
     modalEl.classList.remove("show");
     modalEl.style.display = "none";
     document.body.classList.remove("modal-open");
+    hideReceiptSuccessTick();
 }
 
 async function getAllCustomers() {
@@ -599,6 +673,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderCart();
     populateCustomerDropdown();
 
+    const digitalWrapInit = document.getElementById("digitalProofWrap");
+    if (digitalWrapInit && !document.getElementById("payerEmail")) {
+        const payerLabel = document.getElementById("payerLabel");
+        const emailLabel = document.createElement("label");
+        emailLabel.style.fontSize = "12px";
+        emailLabel.style.color = "#6a5080";
+        emailLabel.innerText = "Payer email";
+
+        const emailInput = document.createElement("input");
+        emailInput.id = "payerEmail";
+        emailInput.type = "email";
+        emailInput.placeholder = "Enter payer email";
+        emailInput.style.width = "100%";
+        emailInput.style.border = "0.5px solid #c8b8d8";
+        emailInput.style.borderRadius = "8px";
+        emailInput.style.fontSize = "13px";
+        emailInput.style.padding = "6px 10px";
+        emailInput.style.marginBottom = "8px";
+
+        if (payerLabel && payerLabel.parentNode === digitalWrapInit) {
+            digitalWrapInit.insertBefore(emailLabel, payerLabel);
+            digitalWrapInit.insertBefore(emailInput, payerLabel);
+        } else {
+            digitalWrapInit.prepend(emailInput);
+            digitalWrapInit.prepend(emailLabel);
+        }
+    }
+
     const discountInput = document.getElementById("discountInput");
     if (discountInput) {
         discountInput.addEventListener("input", () => {
@@ -619,10 +721,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const cashWrap = document.getElementById("cashWrap");
     if (paymentSelect && cashWrap) {
         const digitalWrap = document.getElementById("digitalProofWrap");
+        const payerEmailWrap = document.getElementById("payerEmailWrap");
         const toggle = () => {
             const isCash = paymentSelect.value === "Cash";
             cashWrap.style.display = isCash ? "block" : "none";
             if (digitalWrap) digitalWrap.style.display = isCash ? "none" : "block";
+            if (payerEmailWrap) payerEmailWrap.style.display = isCash ? "none" : "block";
             if (!isCash && cashInput) cashInput.value = "";
             const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
             updateTotals(subtotal);
@@ -640,5 +744,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         searchInput.addEventListener("input", debouncedSearch);
     }
 
+    const receiptModalEl = document.getElementById("receiptModal");
+    if (receiptModalEl) {
+        receiptModalEl.addEventListener("hide.bs.modal", hideReceiptSuccessTick);
+        receiptModalEl.addEventListener("hidden.bs.modal", hideReceiptSuccessTick);
+    }
+
     window.addEventListener("beforeunload", stopBarcodeScanner);
 });
+

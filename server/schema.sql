@@ -1,10 +1,10 @@
--- SmartPOS Database Schema
+﻿-- SmartPOS Database Schema
 -- Run this file once in phpMyAdmin or MySQL Workbench to set up the database
 
 CREATE DATABASE IF NOT EXISTS smartpos;
 USE smartpos;
 
--- ── Users 
+-- â”€â”€ Users 
 CREATE TABLE IF NOT EXISTS users (
     id          VARCHAR(10)  PRIMARY KEY,
     username    VARCHAR(50)  NOT NULL UNIQUE,
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS customers (
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ── Sales 
+-- â”€â”€ Sales 
 CREATE TABLE IF NOT EXISTS sales (
     id              VARCHAR(10)   PRIMARY KEY,
     cashier         VARCHAR(50)   NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS sales (
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
 );
 
--- ── Sales Items 
+-- â”€â”€ Sales Items 
 CREATE TABLE IF NOT EXISTS sales_items (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     sale_id     VARCHAR(10)   NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS sales_items (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 );
 
--- ── Payments 
+-- â”€â”€ Payments 
 CREATE TABLE IF NOT EXISTS payments (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     sale_id     VARCHAR(10)   NOT NULL,
@@ -73,11 +73,14 @@ CREATE TABLE IF NOT EXISTS payments (
     cash_received DECIMAL(10,2),
     change_due  DECIMAL(10,2),
     payer_number VARCHAR(30),
+    provider    VARCHAR(30),
+    provider_reference VARCHAR(80),
+    payment_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
 );
 
--- ── Upgrade notes for existing DBs ───────────────────────────
+-- â”€â”€ Upgrade notes for existing DBs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- ALTER TABLE products ADD COLUMN supplier VARCHAR(100);
 -- ALTER TABLE sales ADD COLUMN subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00;
 -- ALTER TABLE sales ADD COLUMN discount DECIMAL(10,2) NOT NULL DEFAULT 0.00;
@@ -85,8 +88,11 @@ CREATE TABLE IF NOT EXISTS payments (
 -- ALTER TABLE payments ADD COLUMN cash_received DECIMAL(10,2);
 -- ALTER TABLE payments ADD COLUMN change_due DECIMAL(10,2);
 -- ALTER TABLE payments ADD COLUMN payer_number VARCHAR(30);
+-- ALTER TABLE payments ADD COLUMN provider VARCHAR(30);
+-- ALTER TABLE payments ADD COLUMN provider_reference VARCHAR(80);
+-- ALTER TABLE payments ADD COLUMN payment_status VARCHAR(20) NOT NULL DEFAULT 'PENDING';
 
--- ── Inventory log 
+-- â”€â”€ Inventory log 
 CREATE TABLE IF NOT EXISTS inventory_log (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     product_id  VARCHAR(10) NOT NULL,
@@ -97,3 +103,4 @@ CREATE TABLE IF NOT EXISTS inventory_log (
 );
 
 -- No seed data. Create your first admin user from the setup screen.
+

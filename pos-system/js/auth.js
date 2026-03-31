@@ -13,9 +13,16 @@ const PAGE_ROLES = {
     "users.html":     ["Admin"],
 };
 
-function saveSession(u){ sessionStorage.setItem("currentUser", JSON.stringify(u)); }
+function saveSession(u, token){
+    sessionStorage.setItem("currentUser", JSON.stringify(u));
+    if (token) sessionStorage.setItem("authToken", token);
+}
 function getSession(){ const s = sessionStorage.getItem("currentUser"); return s ? JSON.parse(s) : null; }
-function clearSession(){ sessionStorage.removeItem("currentUser"); }
+function getToken(){ return sessionStorage.getItem("authToken") || ""; }
+function clearSession(){
+    sessionStorage.removeItem("currentUser");
+    sessionStorage.removeItem("authToken");
+}
 function getHomePage(role){ return role === "Cashier" ? "pos.html" : "dashboard.html"; }
 
 function getCurrentPage(){
@@ -27,8 +34,9 @@ function getCurrentPage(){
 
 function guardPage(){
     const user = getSession();
+    const token = getToken();
     const page = getCurrentPage();
-    if(!user){ window.location.href = "index.html"; return; }
+    if(!user || !token){ window.location.href = "index.html"; return; }
     const allowed = PAGE_ROLES[page] || [];
     if(!allowed.includes(user.role)) window.location.href = getHomePage(user.role);
 }

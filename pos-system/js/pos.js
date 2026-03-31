@@ -570,8 +570,7 @@ async function checkout() {
             paymentStatus = paymentResult.status;
             if (paymentStatus !== "SUCCESS") {
                 if (paymentStatus === "PENDING") {
-                    showToast("Payment still processing. We'll auto-sync once confirmed.");
-                    alert("Payment is still processing. Keep this page open; sale will auto-record once Paystack confirms.");
+                    showToast("Payment is processing. Sale will auto-record once Paystack confirms.");
                 } else {
                     alert("Mobile money payment was not completed. Sale was not recorded.");
                 }

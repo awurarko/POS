@@ -25,7 +25,7 @@
                 <div class="col-md-3">
                     <div class="card shadow p-3 text-center stat-card">
                         <h6 id="stat1Label">Today's Revenue</h6>
-                        <p id="dailySales" class="fs-4 fw-bold">GHâ‚µ0</p>
+                        <p id="dailySales" class="fs-4 fw-bold">GH&#8373;0</p>
                     </div>
                 </div>
                 <div class="col-md-3" id="stat2Card">
@@ -73,6 +73,8 @@
 </div>
 <script src="js/api.js"></script>
 <script>
+const CEDI = "GH\u20B5";
+
 async function loadDashboard() {
     const user = getSession();
     if (!user) return;
@@ -118,7 +120,7 @@ async function loadDashboard() {
         : (stats ? parseFloat(stats.revenue || 0) : 0);
 
     if (isCashier) {
-        document.getElementById("dashSubtitle").textContent = "Your sales â€” " + user.fullName;
+        document.getElementById("dashSubtitle").textContent = "Your sales - " + user.fullName;
         document.getElementById("stat1Label").textContent = "My Revenue Today";
         document.getElementById("stat4Label").textContent = "My Transactions";
         document.getElementById("stat2Card").style.display = "none";
@@ -135,7 +137,7 @@ async function loadDashboard() {
             : lowStockItems.map(p => `<tr><td>${p.name}</td><td class="text-danger fw-bold">${p.stock}</td></tr>`).join("");
     }
 
-    document.getElementById("dailySales").innerText = "GHâ‚µ" + todayRevenue.toFixed(2);
+    document.getElementById("dailySales").innerText = CEDI + todayRevenue.toFixed(2);
     document.getElementById("totalSales").innerText = allSales.length;
 
     const recent = [...allSales]
@@ -148,7 +150,7 @@ async function loadDashboard() {
             <tr>
                 <td>${s.id}</td>
                 <td>${s.items.map(i => i.name).join(", ")}</td>
-                <td>GHâ‚µ${parseFloat(s.total).toFixed(2)}</td>
+                <td>${CEDI}${parseFloat(s.total).toFixed(2)}</td>
                 <td>${s.paymentMethod}</td>
                 <td>${String(s.dateTime || "").split(" ").slice(1).join(" ") || s.dateTime}</td>
             </tr>`).join("");

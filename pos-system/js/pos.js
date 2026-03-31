@@ -8,6 +8,7 @@ let toastTimer = null;
 let cachedProducts = [];
 let currentProductPage = 1;
 const PRODUCTS_PER_PAGE = 24;
+const CEDI = "GH\u20B5";
 
 function debounce(fn, delay) {
     let t;
@@ -107,7 +108,7 @@ function renderProductList(filter = "") {
             <div class="${tileClass}" onclick="addToCart('${p.id}')">
                 <div class="icon">${getIcon(p.name, p.category)}</div>
                 <div class="p-name">${p.name}</div>
-                <div class="p-price">GHâ‚µ${price.toFixed(2)}</div>
+                <div class="p-price">${CEDI}${price.toFixed(2)}</div>
                 <div class="p-stock ${stockClass}">${stockText}</div>
             </div>`;
     }).join("");
@@ -226,11 +227,11 @@ function renderCart() {
         <div class="cart-item">
             <span class="ci-name">${item.name}</span>
             <div class="qty-controls">
-                <button class="qty-btn" onclick="changeQty(${i}, -1)">âˆ’</button>
+                <button class="qty-btn" onclick="changeQty(${i}, -1)">-</button>
                 <span style="min-width:16px;text-align:center;">${item.qty}</span>
                 <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
             </div>
-            <span class="ci-subtotal">GHâ‚µ${(item.price * item.qty).toFixed(2)}</span>
+            <span class="ci-subtotal">${CEDI}${(item.price * item.qty).toFixed(2)}</span>
             <button class="rm-btn" onclick="removeItem(${i})">âœ•</button>
         </div>
     `).join("");
@@ -383,7 +384,7 @@ async function checkout() {
     }
 
     const payerNumber = (document.getElementById("payerNumber")?.value || "").trim();
-    const payerEmailField = document.getElementById("payerEmail") || document.getElementById("payerEmailAlways");
+    const payerEmailField = document.getElementById("payerEmail");
     const payerEmail = (payerEmailField?.value || "").trim().toLowerCase();
     const momoNetwork = (document.getElementById("momoNetwork")?.value || "mtn-gh").trim();
     if (isMobileMoneyMethod(paymentMethodLabel) && !payerNumber) {
@@ -497,8 +498,6 @@ async function checkout() {
     if (payerInput) payerInput.value = "";
     const payerEmailInput = document.getElementById("payerEmail");
     if (payerEmailInput) payerEmailInput.value = "";
-    const payerEmailAlwaysInput = document.getElementById("payerEmailAlways");
-    if (payerEmailAlwaysInput) payerEmailAlwaysInput.value = "";
     const discountInput = document.getElementById("discountInput");
     if (discountInput) discountInput.value = "0.00";
 
@@ -542,27 +541,27 @@ function showReceipt(saleId, dateTime, subtotal, discount, total, paymentMethod,
                     <tr style="border-bottom:0.5px solid #f0f0f0;">
                         <td style="padding:4px 0;">${i.name}</td>
                         <td style="text-align:center;">${i.qty}</td>
-                        <td style="text-align:right;">GHâ‚µ${(parseFloat(i.price || 0) * parseInt(i.qty || 0, 10)).toFixed(2)}</td>
+                        <td style="text-align:right;">${CEDI}${(parseFloat(i.price || 0) * parseInt(i.qty || 0, 10)).toFixed(2)}</td>
                     </tr>
                 `).join("")}
             </tbody>
         </table>
         <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12px;color:#666;">
-            <span>Subtotal</span><span>GHâ‚µ${subtotal.toFixed(2)}</span>
+            <span>Subtotal</span><span>${CEDI}${subtotal.toFixed(2)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:12px;color:#666;">
-            <span>Discount</span><span>GHâ‚µ${discount.toFixed(2)}</span>
+            <span>Discount</span><span>${CEDI}${discount.toFixed(2)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-weight:700;margin-top:6px;font-size:14px;">
-            <span>Total</span><span>GHâ‚µ${total.toFixed(2)}</span>
+            <span>Total</span><span>${CEDI}${total.toFixed(2)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:4px;">
             <span>Payment</span><span>${paymentMethod}</span>
         </div>
         ${customerName ? `<div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Customer</span><span>${customerName}</span></div>` : ""}
         ${paymentMethod === "Cash"
-            ? `<div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Cash</span><span>GHâ‚µ${(cashReceived || 0).toFixed(2)}</span></div>
-               <div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Change</span><span>GHâ‚µ${(changeDue || 0).toFixed(2)}</span></div>`
+                ? `<div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Cash</span><span>${CEDI}${(cashReceived || 0).toFixed(2)}</span></div>
+                    <div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Change</span><span>${CEDI}${(changeDue || 0).toFixed(2)}</span></div>`
             : `<div style="display:flex;justify-content:space-between;color:#888;font-size:12px;margin-top:2px;"><span>Payer</span><span>${payerNumber || "-"}</span></div>`}
         <p style="text-align:center;color:#aaa;font-size:11px;margin-top:12px;">Thank you for your purchase!</p>
     `;
@@ -721,12 +720,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const cashWrap = document.getElementById("cashWrap");
     if (paymentSelect && cashWrap) {
         const digitalWrap = document.getElementById("digitalProofWrap");
-        const payerEmailWrap = document.getElementById("payerEmailWrap");
         const toggle = () => {
             const isCash = paymentSelect.value === "Cash";
             cashWrap.style.display = isCash ? "block" : "none";
             if (digitalWrap) digitalWrap.style.display = isCash ? "none" : "block";
-            if (payerEmailWrap) payerEmailWrap.style.display = isCash ? "none" : "block";
             if (!isCash && cashInput) cashInput.value = "";
             const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
             updateTotals(subtotal);

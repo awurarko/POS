@@ -10,6 +10,7 @@ let currentProductPage = 1;
 const PRODUCTS_PER_PAGE = 24;
 const CEDI = "GH\u20B5";
 const PENDING_PAYSTACK_KEY = "smartpos.pendingPaystackCheckout";
+let pendingPaystackWatcher = null;
 
 function debounce(fn, delay) {
     let t;
@@ -218,6 +219,11 @@ async function resumePendingPaystackCheckout() {
 
     try {
         const statusRes = await API.getPaystackPaymentStatus(pending.providerReference);
+        if (statusRes.status === "FAILED") {
+            clearPendingPaystackCheckout();
+            showToast("Pending Paystack payment failed. Sale not recorded.");
+            return;
+        }
         if (statusRes.status !== "SUCCESS") return;
 
         const payload = {
@@ -235,6 +241,14 @@ async function resumePendingPaystackCheckout() {
     } catch (e) {
         // Keep pending record for another retry if the user refreshes.
     }
+}
+
+function startPendingPaystackWatcher() {
+    if (pendingPaystackWatcher) return;
+    pendingPaystackWatcher = setInterval(() => {
+        if (document.hidden) return;
+        resumePendingPaystackCheckout();
+    }, 12000);
 }
 
 function isMobileMoneyMethod(method) {
@@ -552,9 +566,15 @@ async function checkout() {
                 showToast("Paystack opened. Complete payment in the new tab. Verifying automatically...");
             }
 
-            paymentStatus = await waitForPaystackSuccess(providerReference);
+            const paymentResult = await waitForPaystackSuccess(providerReference);
+            paymentStatus = paymentResult.status;
             if (paymentStatus !== "SUCCESS") {
-                alert("Mobile money payment was not completed. Sale was not recorded.");
+                if (paymentStatus === "PENDING") {
+                    showToast("Payment still processing. We'll auto-sync once confirmed.");
+                    alert("Payment is still processing. Keep this page open; sale will auto-record once Paystack confirms.");
+                } else {
+                    alert("Mobile money payment was not completed. Sale was not recorded.");
+                }
                 return;
             }
         } catch (e) {
@@ -608,16 +628,18 @@ async function checkout() {
 }
 
 async function waitForPaystackSuccess(reference) {
-    const maxChecks = 120;
+    const maxChecks = 180;
     const delayMs = 5000;
+    let lastKnown = "PENDING";
 
     for (let i = 0; i < maxChecks; i++) {
         const result = await API.getPaystackPaymentStatus(reference);
-        if (result.status === "SUCCESS") return "SUCCESS";
-        if (result.status === "FAILED") return "FAILED";
+        lastKnown = result.status || lastKnown;
+        if (result.status === "SUCCESS") return { status: "SUCCESS", data: result };
+        if (result.status === "FAILED") return { status: "FAILED", data: result };
         await new Promise(resolve => setTimeout(resolve, delayMs));
     }
-    return "PENDING";
+    return { status: lastKnown === "SUCCESS" ? "SUCCESS" : "PENDING", data: null };
 }
 
 function showReceipt(saleId, dateTime, subtotal, discount, total, paymentMethod, items, cashReceived, changeDue, customerName, payerNumber) {
@@ -769,6 +791,7 @@ document.addEventListener("click", (e) => {
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
+    startPendingPaystackWatcher();
     await resumePendingPaystackCheckout();
 
     await fetchProducts();

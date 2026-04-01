@@ -593,7 +593,8 @@ async function checkout() {
                 return;
             }
         } catch (e) {
-            showToast("Paystack payment could not be confirmed right now. We'll retry automatically.");
+            const msg = (e && e.message) ? String(e.message) : "Paystack payment could not be confirmed right now. We'll retry automatically.";
+            showToast(msg);
             return;
         }
     }

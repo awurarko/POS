@@ -5,12 +5,23 @@ function buildApiCandidates() {
     const host = window.location.hostname || "localhost";
     const protocol = window.location.protocol === "https:" ? "https:" : "http:";
     const apiBaseFromQuery = new URLSearchParams(window.location.search).get("apiBase");
+    const getCookie = (name) => {
+        const key = `${encodeURIComponent(name)}=`;
+        const cookie = document.cookie.split(";").map(v => v.trim()).find(v => v.startsWith(key));
+        return cookie ? decodeURIComponent(cookie.slice(key.length)) : "";
+    };
+    const setCookie = (name, value) => {
+        document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)};path=/;max-age=${60 * 60 * 24 * 30};SameSite=Lax`;
+    };
     if (apiBaseFromQuery && apiBaseFromQuery.trim()) {
-        window.localStorage.setItem("smartpos.apiBase", apiBaseFromQuery.trim());
+        const clean = apiBaseFromQuery.trim();
+        window.localStorage.setItem("smartpos.apiBase", clean);
+        setCookie("smartpos.apiBase", clean);
     }
 
+    const apiBaseFromGlobal = (window.SMARTPOS_API_BASE || "").trim();
     const manual = (window.localStorage.getItem("smartpos.apiBase") || "").trim();
-    const allowRemoteOnLocalhost = window.localStorage.getItem("smartpos.allowRemoteOnLocalhost") === "true";
+    const cookieBase = getCookie("smartpos.apiBase").trim();
     const deployedSameOrigin = `${window.location.origin}/api`;
     const isLocalHost = ["localhost", "127.0.0.1"].includes(host);
 
@@ -24,21 +35,23 @@ function buildApiCandidates() {
         }
     };
 
-    // Prevent stale deployed overrides from breaking localhost login/testing,
-    // unless user explicitly opted in to share data with deployed backend.
-    if (isLocalHost && manual && !isLocalApiBase(manual) && !allowRemoteOnLocalhost) {
-        window.localStorage.removeItem("smartpos.apiBase");
+    const selectedManualBase = manual || apiBaseFromGlobal || cookieBase;
+
+    if (selectedManualBase) {
+        window.localStorage.setItem("smartpos.apiBase", selectedManualBase);
+        setCookie("smartpos.apiBase", selectedManualBase);
     }
 
     const candidates = isLocalHost
         ? [
+            selectedManualBase,
             `${protocol}//${host}:3001/api`,
             "http://localhost:3001/api",
             "http://127.0.0.1:3001/api",
-            isLocalApiBase(manual) ? manual : "",
+            isLocalApiBase(selectedManualBase) ? selectedManualBase : "",
         ].filter(Boolean)
         : [
-            manual,
+            selectedManualBase,
             deployedSameOrigin,
             "http://localhost:3001/api",
             "http://127.0.0.1:3001/api",
@@ -255,8 +268,21 @@ async function apiFetch(path, options = {}) {
                     throw new Error("Request timed out. Please try again.");
                 }
                 if (error.name === "TypeError") {
+                    const isOnlyLocalCandidates = API_BASE_CANDIDATES.every(base => /127\.0\.0\.1:3001|localhost:3001/i.test(base));
+                    const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname || "");
+                    if (isLocalHost && isOnlyLocalCandidates && !window.__smartposApiPromptShown) {
+                        window.__smartposApiPromptShown = true;
+                        const entered = window.prompt("Enter your live backend API base URL (example: https://your-backend-domain/api)", "");
+                        if (entered && entered.trim()) {
+                            const clean = entered.trim();
+                            window.localStorage.setItem("smartpos.apiBase", clean);
+                            document.cookie = `${encodeURIComponent("smartpos.apiBase")}=${encodeURIComponent(clean)};path=/;max-age=${60 * 60 * 24 * 30};SameSite=Lax`;
+                            window.location.reload();
+                            throw new Error("Applying API base configuration...");
+                        }
+                    }
                     throw new Error(
-                        `Cannot reach SmartPOS API. Start the backend server on port 3001. Tried: ${API_BASE_CANDIDATES.join(", ")}`
+                        `Cannot reach SmartPOS API. For local use, start backend on port 3001. For production, set a live API base (for example: ?apiBase=https://your-backend-domain/api). Tried: ${API_BASE_CANDIDATES.join(", ")}`
                     );
                 }
                 throw error;
@@ -268,7 +294,7 @@ async function apiFetch(path, options = {}) {
     }
 }
 
-// â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Auth 
 const API = {
 
     setupStatus: () => apiFetch("/setup/status"),
@@ -277,13 +303,13 @@ const API = {
     login: (username, password) =>
         apiFetch("/login", { method:"POST", body: JSON.stringify({ username, password }) }),
 
-    // â”€â”€ Users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Users 
     getUsers:    ()       => apiFetch("/users"),
     createUser:  (data)   => apiFetch("/users",      { method:"POST",   body: JSON.stringify(data) }),
     updateUser:  (id, d)  => apiFetch(`/users/${id}`,{ method:"PUT",    body: JSON.stringify(d)    }),
     deleteUser:  (id)     => apiFetch(`/users/${id}`,{ method:"DELETE" }),
 
-    // â”€â”€ Products â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â”€â”€ Products 
     getProducts:   ()      => apiFetch("/products"),
     getProductByBarcode: (code) => apiFetch(`/products/barcode/${encodeURIComponent(code)}`),
     createProduct: (data)  => apiFetch("/products",       { method:"POST",   body: JSON.stringify(data) }),

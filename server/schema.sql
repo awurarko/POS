@@ -4,7 +4,7 @@
 CREATE DATABASE IF NOT EXISTS smartpos;
 USE smartpos;
 
--- â”€â”€ Users 
+--  Users 
 CREATE TABLE IF NOT EXISTS users (
     id          VARCHAR(10)  PRIMARY KEY,
     username    VARCHAR(50)  NOT NULL UNIQUE,
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS customers (
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- â”€â”€ Sales 
+-- Sales 
 CREATE TABLE IF NOT EXISTS sales (
     id              VARCHAR(10)   PRIMARY KEY,
     cashier         VARCHAR(50)   NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS sales (
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
 );
 
--- â”€â”€ Sales Items 
+--  Sales Items 
 CREATE TABLE IF NOT EXISTS sales_items (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     sale_id     VARCHAR(10)   NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS sales_items (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 );
 
--- â”€â”€ Payments 
+--  Payments 
 CREATE TABLE IF NOT EXISTS payments (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     sale_id     VARCHAR(10)   NOT NULL,
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS payments (
     FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
 );
 
--- â”€â”€ Upgrade notes for existing DBs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+--  Upgrade notes for existing DBs
 -- ALTER TABLE products ADD COLUMN supplier VARCHAR(100);
 -- ALTER TABLE sales ADD COLUMN subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00;
 -- ALTER TABLE sales ADD COLUMN discount DECIMAL(10,2) NOT NULL DEFAULT 0.00;
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS payments (
 -- ALTER TABLE payments ADD COLUMN provider_reference VARCHAR(80);
 -- ALTER TABLE payments ADD COLUMN payment_status VARCHAR(20) NOT NULL DEFAULT 'PENDING';
 
--- â”€â”€ Inventory log 
+--  Inventory log 
 CREATE TABLE IF NOT EXISTS inventory_log (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     product_id  VARCHAR(10) NOT NULL,

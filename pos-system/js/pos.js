@@ -666,10 +666,14 @@ async function waitForPaystackSuccess(reference) {
     let lastKnown = "PENDING";
 
     for (let i = 0; i < maxChecks; i++) {
-        const result = await API.getPaystackPaymentStatus(reference);
-        lastKnown = result.status || lastKnown;
-        if (result.status === "SUCCESS") return { status: "SUCCESS", data: result };
-        if (result.status === "FAILED") return { status: "FAILED", data: result };
+        try {
+            const result = await API.getPaystackPaymentStatus(reference);
+            lastKnown = result.status || lastKnown;
+            if (result.status === "SUCCESS") return { status: "SUCCESS", data: result };
+            if (result.status === "FAILED") return { status: "FAILED", data: result };
+        } catch (e) {
+            // Ignore temporary network/provider hiccups and keep polling.
+        }
         await new Promise(resolve => setTimeout(resolve, delayMs));
     }
     return { status: lastKnown === "SUCCESS" ? "SUCCESS" : "PENDING", data: null };

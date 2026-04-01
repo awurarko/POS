@@ -24,6 +24,8 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
 const PAYSTACK_INITIATE_URL = process.env.PAYSTACK_INITIATE_URL || "https://api.paystack.co/transaction/initialize";
 const PAYSTACK_VERIFY_URL_TEMPLATE = process.env.PAYSTACK_VERIFY_URL_TEMPLATE || "https://api.paystack.co/transaction/verify/{reference}";
 const PAYSTACK_CALLBACK_URL = process.env.PAYSTACK_CALLBACK_URL || "";
+const PAYSTACK_REQUEST_TIMEOUT_MS = Number.parseInt(process.env.PAYSTACK_REQUEST_TIMEOUT_MS || "15000", 10);
+const PAYSTACK_MAX_RETRIES = Number.parseInt(process.env.PAYSTACK_MAX_RETRIES || "2", 10);
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
     .split(",")
@@ -135,26 +137,54 @@ async function paystackRequest(url, method = "GET", payload = null) {
         throw new Error("Paystack endpoint URL is not configured.");
     }
 
-    const response = await fetchHttp(url, {
-        method,
-        headers: getPaystackHeaders(),
-        body: payload ? JSON.stringify(payload) : undefined,
-    });
+    const transientStatusCodes = new Set([408, 429, 500, 502, 503, 504]);
 
-    const text = await response.text();
-    let data = {};
-    try {
-        data = text ? JSON.parse(text) : {};
-    } catch (err) {
-        data = { raw: text };
+    for (let attempt = 0; attempt <= PAYSTACK_MAX_RETRIES; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), PAYSTACK_REQUEST_TIMEOUT_MS);
+
+        try {
+            const response = await fetchHttp(url, {
+                method,
+                headers: getPaystackHeaders(),
+                body: payload ? JSON.stringify(payload) : undefined,
+                signal: controller.signal,
+            });
+
+            const text = await response.text();
+            let data = {};
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch (err) {
+                data = { raw: text };
+            }
+
+            if (response.ok) {
+                return data;
+            }
+
+            const message = data.message || data.error || `Paystack request failed with ${response.status}`;
+            const retryable = transientStatusCodes.has(response.status);
+            if (!retryable || attempt >= PAYSTACK_MAX_RETRIES) {
+                throw new Error(message);
+            }
+        } catch (err) {
+            const retryableError = err.name === "AbortError" || err.name === "TypeError";
+            if ((!retryableError && attempt >= PAYSTACK_MAX_RETRIES) || (!retryableError && err.message)) {
+                throw err;
+            }
+            if (attempt >= PAYSTACK_MAX_RETRIES) {
+                throw new Error("Paystack request timed out. Please try again.");
+            }
+        } finally {
+            clearTimeout(timeoutId);
+        }
+
+        const backoffMs = 400 * (attempt + 1);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
     }
 
-    if (!response.ok) {
-        const message = data.message || data.error || `Paystack request failed with ${response.status}`;
-        throw new Error(message);
-    }
-
-    return data;
+    throw new Error("Paystack request failed after retries.");
 }
 
 function normalizePaystackStatus(payload) {

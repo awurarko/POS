@@ -118,7 +118,6 @@ function renderProductList(filter = "") {
 
         return `
             <div class="${tileClass}" onclick="addToCart('${p.id}')">
-                <div class="icon">${getIcon(p.name, p.category)}</div>
                 <div class="p-name">${p.name}</div>
                 <div class="p-price">${CEDI}${price.toFixed(2)}</div>
                 <div class="p-stock ${stockClass}">${stockText}</div>

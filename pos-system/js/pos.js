@@ -11,6 +11,7 @@ const PRODUCTS_PER_PAGE = 24;
 const CEDI = "GH\u20B5";
 const PENDING_PAYSTACK_KEY = "smartpos.pendingPaystackCheckout";
 let pendingPaystackWatcher = null;
+let pendingPaystackAuthorizationUrl = "";
 
 function debounce(fn, delay) {
     let t;
@@ -43,6 +44,23 @@ function showToast(message) {
     toastTimer = setTimeout(() => {
         toast.style.display = "none";
     }, 2200);
+}
+
+function showPaystackOpenToast(url) {
+    const toast = document.getElementById("posToast");
+    if (!toast) return;
+    pendingPaystackAuthorizationUrl = url;
+    toast.innerHTML = 'Popup blocked. <button type="button" onclick="openPendingPaystackAuthorization()" style="margin-left:8px;border:0;background:#fff;color:#1f0e26;border-radius:6px;padding:4px 8px;font-weight:700;">Open Paystack</button>';
+    toast.style.display = "block";
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        toast.style.display = "none";
+    }, 12000);
+}
+
+function openPendingPaystackAuthorization() {
+    if (!pendingPaystackAuthorizationUrl) return;
+    window.open(pendingPaystackAuthorizationUrl, "_blank", "noopener");
 }
 
 function showReceiptSuccessTick() {
@@ -575,8 +593,7 @@ async function checkout() {
                 const popup = window.open(init.authorizationUrl, "_blank", "noopener");
                 const blocked = !popup || popup.closed || typeof popup.closed === "undefined";
                 if (blocked) {
-                    showToast("Opening Paystack in this tab...");
-                    window.location.assign(init.authorizationUrl);
+                    showPaystackOpenToast(init.authorizationUrl);
                     return;
                 }
                 showToast("Paystack opened. Complete payment in the new tab. Verifying automatically...");

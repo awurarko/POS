@@ -316,7 +316,7 @@ const API = {
     updateProduct: (id, d) => apiFetch(`/products/${id}`, { method:"PUT",    body: JSON.stringify(d)    }),
     deleteProduct: (id)    => apiFetch(`/products/${id}`, { method:"DELETE" }),
 
-    // â”€â”€ Customers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Customers 
     getCustomers:   ()      => apiFetch("/customers"),
     createCustomer: (data)  => apiFetch("/customers",       { method:"POST",   body: JSON.stringify(data) }),
     updateCustomer: (id, d) => apiFetch(`/customers/${id}`, { method:"PUT",    body: JSON.stringify(d)    }),
@@ -324,22 +324,22 @@ const API = {
     addCustomerPoints: (id, points) =>
         apiFetch(`/customers/${id}/points`, { method:"POST", body: JSON.stringify({ points }) }),
 
-    // â”€â”€ Sales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  Sales
     getSales:    ()     => apiFetch("/sales"),
     createSale:  (data) => apiFetch("/sales", { method:"POST", body: JSON.stringify(data) }),
     clearSales:  ()     => apiFetch("/sales", { method:"DELETE" }),
 
-    // â”€â”€ Paystack payments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //Paystack payments
     initiatePaystackPayment: (data) =>
         apiFetch("/payments/paystack/initiate", { method:"POST", body: JSON.stringify(data) }),
     getPaystackPaymentStatus: (reference) =>
         apiFetch(`/payments/paystack/status/${encodeURIComponent(reference)}`),
 
-    // â”€â”€ Inventory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  Inventory
     restock: (productId, qty) =>
         apiFetch("/inventory/restock", { method:"POST", body: JSON.stringify({ productId, qty }) }),
 
-    // â”€â”€ Dashboard stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  Dashboard stats
     getStats: () => apiFetch("/stats"),
     getReportsMvp: () => apiFetch("/reports/mvp"),
 

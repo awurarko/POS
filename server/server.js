@@ -131,7 +131,7 @@ function getSafeCallbackUrl(value) {
         return "";
     }
 }
-
+//sends http requests to paystack
 async function paystackRequest(url, method = "GET", payload = null) {
     if (!url) {
         throw new Error("Paystack endpoint URL is not configured.");
@@ -186,7 +186,7 @@ async function paystackRequest(url, method = "GET", payload = null) {
 
     throw new Error("Paystack request failed after retries.");
 }
-
+//covert paystack responses into simple statuses for the frontend to handle
 function normalizePaystackStatus(payload) {
     const raw = String(
         payload.data?.status ||
@@ -254,9 +254,9 @@ async function nextId(table, prefix, totalLen = 10) {
     throw new Error("Could not generate a unique ID. Please retry.");
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 // AUTH
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 
 // GET /api/setup/status
 app.get("/api/setup/status", async (req, res) => {
@@ -351,10 +351,8 @@ app.post("/api/login", authLimiter, async (req, res) => {
     }
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// PAYSTACK PAYMENTS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
+// PAYSTACK PAYMENTS
 app.post("/api/payments/paystack/initiate", requireAuth, async (req, res) => {
     try {
         const amount = toNonNegativeNumber(req.body.amount);
@@ -365,7 +363,7 @@ app.post("/api/payments/paystack/initiate", requireAuth, async (req, res) => {
         const description = cleanText(req.body.description || "POS mobile money payment", 160);
         const externalReference = cleanText(req.body.externalReference, 80);
         const callbackUrl = getSafeCallbackUrl(req.body.callbackUrl) || getSafeCallbackUrl(PAYSTACK_CALLBACK_URL);
-
+        //get data from frontend and validate it before sending to paystack
         if (amount == null || amount <= 0) {
             return res.status(400).json({ error: "Amount must be greater than zero." });
         }
@@ -378,7 +376,7 @@ app.post("/api/payments/paystack/initiate", requireAuth, async (req, res) => {
         if (!["mtn-gh", "tgo-gh", "vodafone-gh", "airteltigo-gh"].includes(channel)) {
             return res.status(400).json({ error: "Invalid mobile money network." });
         }
-
+        //create transaction reference and payload for paystack(unique ID for each transaction)
         const reference = externalReference || `MM-${Date.now()}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
         const payload = {
             email: customerEmail,
@@ -394,7 +392,7 @@ app.post("/api/payments/paystack/initiate", requireAuth, async (req, res) => {
                 description,
             },
         };
-
+        //send a request to pay stack
         const data = await paystackRequest(PAYSTACK_INITIATE_URL, "POST", payload);
         res.json({
             ok: true,
@@ -407,7 +405,7 @@ app.post("/api/payments/paystack/initiate", requireAuth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
+//check payment status from paystack using the transaction reference
 app.get("/api/payments/paystack/status/:reference", requireAuth, async (req, res) => {
     try {
         const reference = cleanText(req.params.reference, 80);
@@ -426,9 +424,8 @@ app.get("/api/payments/paystack/status/:reference", requireAuth, async (req, res
     }
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 // USERS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 app.get("/api/users", requireAuth, allowRoles("Admin"), async (req, res) => {
     try {
@@ -494,9 +491,8 @@ app.delete("/api/users/:id", requireAuth, allowRoles("Admin"), async (req, res) 
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 // PRODUCTS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 app.get("/api/products", requireAuth, async (req, res) => {
     try {
@@ -560,9 +556,9 @@ app.delete("/api/products/:id", requireAuth, allowRoles("Admin", "Manager"), asy
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 // CUSTOMERS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 
 app.get("/api/customers", requireAuth, async (req, res) => {
     try {
@@ -629,9 +625,9 @@ app.post("/api/customers/:id/points", requireAuth, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 // SALES
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 
 app.get("/api/sales", requireAuth, async (req, res) => {
     try {
